@@ -11,3 +11,11 @@ export {
   isVibrateSupported,
 } from "./signals.js";
 
+export {
+  PATTERN_CALL,
+  PATTERN_MESSAGE,
+  PATTERN_URGENT,
+  PRESETS,
+  getPreset,
+} from "./presets.js";
+
