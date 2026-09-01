@@ -7,4 +7,5 @@ export {
   showBanner,
   vibratePattern,
   alertCombo,
+  pulseBorder,
 } from "./signals.js";

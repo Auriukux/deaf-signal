@@ -139,6 +139,60 @@ export function vibratePattern(pattern = [200, 100, 200]) {
   return navigator.vibrate(pattern);
 }
 
+
+/**
+ * Pulse an element's border to draw attention without sound.
+ * @param {Element|string} target Element or CSS selector
+ * @param {object} [opts]
+ * @param {string} [opts.color="#ff9800"] Border / outline color
+ * @param {number} [opts.times=3] Number of pulse cycles
+ * @param {number} [opts.durationMs=900] Total animation duration
+ * @returns {Promise<void>}
+ */
+export function pulseBorder(target, opts = {}) {
+  const { color = "#ff9800", times = 3, durationMs = 900 } = opts;
+
+  return new Promise((resolve) => {
+    if (typeof document === "undefined") {
+      resolve();
+      return;
+    }
+    const el =
+      typeof target === "string" ? document.querySelector(target) : target;
+    if (!el || !(el instanceof Element)) {
+      resolve();
+      return;
+    }
+
+    const prevOutline = el.style.outline;
+    const prevTransition = el.style.transition;
+    const prevOffset = el.style.outlineOffset;
+    el.style.transition = "outline-color 120ms ease, outline-width 120ms ease";
+    el.style.outlineOffset = "2px";
+
+    const stepMs = Math.max(80, Math.floor(durationMs / (times * 2)));
+    let step = 0;
+    const totalSteps = times * 2;
+
+    const tick = () => {
+      const on = step % 2 === 0;
+      el.style.outline = on ? `3px solid ${color}` : `3px solid transparent`;
+      step += 1;
+      if (step >= totalSteps) {
+        window.setTimeout(() => {
+          el.style.outline = prevOutline;
+          el.style.transition = prevTransition;
+          el.style.outlineOffset = prevOffset;
+          resolve();
+        }, stepMs);
+        return;
+      }
+      window.setTimeout(tick, stepMs);
+    };
+    tick();
+  });
+}
+
 /**
  * Combined alert: optional flash + banner + vibrate.
  * @param {string} message Banner text

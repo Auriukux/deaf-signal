@@ -80,6 +80,7 @@
       <button type="button" id="btn-banner" class="warn">Rodyti juostą (banner)</button>
       <button type="button" id="btn-vibrate">Vibruoti (jei palaikoma)</button>
       <button type="button" id="btn-combo" class="urgent">Kombinuotas įspėjimas</button>
+      <button type="button" id="btn-pulse">Pulsuoti rėmelį (pulseBorder)</button>
     </div>
     <p class="hint">
       Vibracija veikia daugelyje mobiliųjų Chrome / Android.
@@ -93,6 +94,7 @@
       showBanner,
       vibratePattern,
       alertCombo,
+      pulseBorder,
     } from "../src/index.js";
 
     document.getElementById("btn-flash").addEventListener("click", () => {
@@ -120,6 +122,11 @@
       alertCombo("Skubus įspėjimas — patikrinkite pranešimą!", {
         level: "urgent",
       });
+    });
+
+    document.getElementById("btn-pulse").addEventListener("click", () => {
+      const card = document.querySelector(".card");
+      pulseBorder(card, { color: "#4fc3f7", times: 3, durationMs: 1000 });
     });
   </script>
 </body>

@@ -43,6 +43,7 @@ await alertCombo("Urgent alert!", { level: "urgent" });
 | `showBanner(message, opts?)` | Top banner with `role="alert"` |
 | `vibratePattern(pattern?)` | `navigator.vibrate` helper (safe fallback) |
 | `alertCombo(message, opts?)` | Flash + banner + vibrate together |
+| `pulseBorder(target, opts?)` | Pulse an element border to draw attention |
 
 ## Demo
 
