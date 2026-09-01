@@ -21,6 +21,7 @@ import {
   showBanner,
   vibratePattern,
   alertCombo,
+  pulseBorder,
 } from "deaf-signal";
 
 await flashScreen({ color: "#ffeb3b", durationMs: 400 });
@@ -47,7 +48,7 @@ await alertCombo("Urgent alert!", { level: "urgent" });
 
 ## Demo
 
-Open `examples/demo.html` in a browser (file URL or local static server):
+Open `examples/demo.html` in a browser. Prefer a local static server (ESM imports may be blocked from `file://`):
 
 ```bash
 npx --yes serve examples
