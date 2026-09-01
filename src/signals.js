@@ -7,11 +7,42 @@ const DEFAULT_FLASH_MS = 400;
 const DEFAULT_BANNER_MS = 3000;
 
 /**
+ * Whether the user (or caller) prefers reduced motion.
+ * Explicit `reduceMotion` wins; otherwise checks `prefers-reduced-motion`.
+ * @param {boolean} [explicit]
+ * @returns {boolean}
+ */
+function shouldReduceMotion(explicit) {
+  if (explicit === true) return true;
+  if (explicit === false) return false;
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    return false;
+  }
+  try {
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * True when the Vibration API is available (call still needs a user gesture on many browsers).
+ * @returns {boolean}
+ */
+export function isVibrateSupported() {
+  return (
+    typeof navigator !== "undefined" && typeof navigator.vibrate === "function"
+  );
+}
+
+/**
  * Briefly flash the viewport with a solid overlay color.
+ * Honors `prefers-reduced-motion` (or `opts.reduceMotion`) by skipping the flash.
  * @param {object} [opts]
  * @param {string} [opts.color="#ffeb3b"] Overlay background color
  * @param {number} [opts.durationMs=400] How long the flash stays visible
  * @param {number} [opts.opacity=0.55] Overlay opacity 0–1
+ * @param {boolean} [opts.reduceMotion] Force skip/respect reduced motion (default: OS preference)
  * @returns {Promise<void>}
  */
 export function flashScreen(opts = {}) {
@@ -19,10 +50,15 @@ export function flashScreen(opts = {}) {
     color = "#ffeb3b",
     durationMs = DEFAULT_FLASH_MS,
     opacity = 0.55,
+    reduceMotion: reduceMotionOpt,
   } = opts;
 
   return new Promise((resolve) => {
     if (typeof document === "undefined") {
+      resolve();
+      return;
+    }
+    if (shouldReduceMotion(reduceMotionOpt)) {
       resolve();
       return;
     }
@@ -133,24 +169,30 @@ export function showBanner(message, opts = {}) {
  * @returns {boolean} true if vibrate was called
  */
 export function vibratePattern(pattern = [200, 100, 200]) {
-  if (typeof navigator === "undefined" || typeof navigator.vibrate !== "function") {
+  if (!isVibrateSupported()) {
     return false;
   }
   return navigator.vibrate(pattern);
 }
 
-
 /**
  * Pulse an element's border to draw attention without sound.
+ * Honors reduced motion by showing a brief static outline instead of pulsing.
  * @param {Element|string} target Element or CSS selector
  * @param {object} [opts]
  * @param {string} [opts.color="#ff9800"] Border / outline color
  * @param {number} [opts.times=3] Number of pulse cycles
  * @param {number} [opts.durationMs=900] Total animation duration
+ * @param {boolean} [opts.reduceMotion] Force skip/respect reduced motion (default: OS preference)
  * @returns {Promise<void>}
  */
 export function pulseBorder(target, opts = {}) {
-  const { color = "#ff9800", times = 3, durationMs = 900 } = opts;
+  const {
+    color = "#ff9800",
+    times = 3,
+    durationMs = 900,
+    reduceMotion: reduceMotionOpt,
+  } = opts;
 
   return new Promise((resolve) => {
     if (typeof document === "undefined") {
@@ -167,6 +209,18 @@ export function pulseBorder(target, opts = {}) {
     const prevOutline = el.style.outline;
     const prevTransition = el.style.transition;
     const prevOffset = el.style.outlineOffset;
+
+    if (shouldReduceMotion(reduceMotionOpt)) {
+      el.style.outlineOffset = "2px";
+      el.style.outline = `3px solid ${color}`;
+      window.setTimeout(() => {
+        el.style.outline = prevOutline;
+        el.style.outlineOffset = prevOffset;
+        resolve();
+      }, Math.min(400, durationMs));
+      return;
+    }
+
     el.style.transition = "outline-color 120ms ease, outline-width 120ms ease";
     el.style.outlineOffset = "2px";
 
@@ -195,6 +249,7 @@ export function pulseBorder(target, opts = {}) {
 
 /**
  * Combined alert: optional flash + banner + vibrate.
+ * Passes `reduceMotion` through to flash (skipped when reduced motion is active).
  * @param {string} message Banner text
  * @param {object} [opts]
  * @param {boolean} [opts.flash=true]
@@ -203,6 +258,7 @@ export function pulseBorder(target, opts = {}) {
  * @param {"info"|"warn"|"urgent"} [opts.level="warn"]
  * @param {string} [opts.flashColor]
  * @param {number|number[]} [opts.vibratePattern]
+ * @param {boolean} [opts.reduceMotion] Force skip/respect reduced motion for flash
  * @returns {Promise<{banner: HTMLElement|null, vibrated: boolean}>}
  */
 export async function alertCombo(message, opts = {}) {
@@ -213,6 +269,7 @@ export async function alertCombo(message, opts = {}) {
     level = "warn",
     flashColor,
     vibratePattern: vPattern = [200, 80, 200, 80, 400],
+    reduceMotion: reduceMotionOpt,
   } = opts;
 
   const flashColors = {
@@ -221,11 +278,13 @@ export async function alertCombo(message, opts = {}) {
     urgent: "#ef5350",
   };
 
+  const reduce = shouldReduceMotion(reduceMotionOpt);
   const tasks = [];
-  if (flash) {
+  if (flash && !reduce) {
     tasks.push(
       flashScreen({
         color: flashColor || flashColors[level] || flashColors.warn,
+        reduceMotion: false,
       })
     );
   }

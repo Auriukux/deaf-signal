@@ -8,4 +8,6 @@ export {
   vibratePattern,
   alertCombo,
   pulseBorder,
+  isVibrateSupported,
 } from "./signals.js";
+
