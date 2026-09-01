@@ -56,6 +56,24 @@ await pulseBorder("#focus-target", { reduceMotion: true });
 
 `flashScreen`, `pulseBorder`, and `alertCombo` accept optional `reduceMotion: boolean`. When omitted, they follow the OS `prefers-reduced-motion: reduce` media query.
 
+### Vibration presets
+
+Named patterns live in `src/presets.js` (also re-exported from the package root):
+
+| Export | Pattern (ms) | Typical use |
+| --- | --- | --- |
+| `PATTERN_CALL` | `[300, 120, 300, 120, 300]` | Incoming call / ring cue |
+| `PATTERN_MESSAGE` | `[100, 80, 100]` | New message / notification |
+| `PATTERN_URGENT` | `[200, 80, 200, 80, 200, 80, 500]` | Urgent / alarm |
+| `PRESETS` / `getPreset(name)` | map / lookup | `getPreset("call")` |
+
+```js
+import { vibratePattern, PATTERN_MESSAGE, getPreset } from "deaf-signal";
+
+vibratePattern(PATTERN_MESSAGE);
+vibratePattern(getPreset("urgent"));
+```
+
 ## Demo
 
 Open `examples/demo.html` in a browser. Prefer a local static server (ESM imports may be blocked from `file://`):
