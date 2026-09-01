@@ -91,7 +91,7 @@ Many web apps still signal only with sound. This package makes it easy to add **
 
 ## License
 
-MIT \u00A9 Auriukux
+MIT © Auriukux
 
 ---
 
