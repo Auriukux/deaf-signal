@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>deaf-signal — demonstracija</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #0f1419;
+      --card: #1a2332;
+      --fg: #e8eef7;
+      --muted: #8b9bb4;
+      --accent: #4fc3f7;
+      --btn: #1565c0;
+      --btn-warn: #f9a825;
+      --btn-urgent: #c62828;
+      --btn-fg: #fff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      padding: 24px 16px 48px;
+    }
+    main { max-width: 560px; margin: 0 auto; }
+    h1 { font-size: 1.6rem; margin: 0 0 8px; }
+    .lead { color: var(--muted); margin: 0 0 24px; line-height: 1.5; }
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 20px;
+      display: grid;
+      gap: 12px;
+    }
+    button {
+      appearance: none;
+      border: none;
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--btn);
+      color: var(--btn-fg);
+      text-align: left;
+    }
+    button.warn { background: var(--btn-warn); color: #1a1a1a; }
+    button.urgent { background: var(--btn-urgent); }
+    button:focus-visible {
+      outline: 3px solid var(--accent);
+      outline-offset: 2px;
+    }
+    .hint {
+      margin-top: 20px;
+      font-size: 0.875rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    code {
+      font-size: 0.85em;
+      background: #0003;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>deaf-signal</h1>
+    <p class="lead">
+      Vizualūs ir haptic (vibracijos) įspėjimai be garso —
+      prieinamumas kurtiesiems ir neprigirdintiems.
+    </p>
+    <div class="card">
+      <button type="button" id="btn-flash">Mirksėti ekraną (flash)</button>
+      <button type="button" id="btn-banner" class="warn">Rodyti juostą (banner)</button>
+      <button type="button" id="btn-vibrate">Vibruoti (jei palaikoma)</button>
+      <button type="button" id="btn-combo" class="urgent">Kombinuotas įspėjimas</button>
+    </div>
+    <p class="hint">
+      Vibracija veikia daugelyje mobiliųjų Chrome / Android.
+      Atidarykite šį failą tiesiogiai arba per lokalų serverį.
+      Importas: <code>../src/index.js</code>
+    </p>
+  </main>
+  <script type="module">
+    import {
+      flashScreen,
+      showBanner,
+      vibratePattern,
+      alertCombo,
+    } from "../src/index.js";
+
+    document.getElementById("btn-flash").addEventListener("click", () => {
+      flashScreen({ color: "#ffeb3b", durationMs: 350 });
+    });
+
+    document.getElementById("btn-banner").addEventListener("click", () => {
+      showBanner("Dėmesio: svarbus pranešimas be garso.", {
+        level: "warn",
+        durationMs: 4000,
+      });
+    });
+
+    document.getElementById("btn-vibrate").addEventListener("click", () => {
+      const ok = vibratePattern([120, 60, 120, 60, 240]);
+      if (!ok) {
+        showBanner("Vibracija nepalaikoma šiame įrenginyje / naršyklėje.", {
+          level: "info",
+          durationMs: 3500,
+        });
+      }
+    });
+
+    document.getElementById("btn-combo").addEventListener("click", () => {
+      alertCombo("Skubus įspėjimas — patikrinkite pranešimą!", {
+        level: "urgent",
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,44 @@
+{
+  "name": "deaf-signal",
+  "version": "0.1.0",
+  "description": "Visual and haptic web alerts \u2014 no sound. Accessibility for deaf / hard-of-hearing.",
+  "type": "module",
+  "main": "./src/index.js",
+  "module": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./signals": "./src/signals.js"
+  },
+  "files": [
+    "src",
+    "examples",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "demo": "npx --yes serve examples"
+  },
+  "keywords": [
+    "a11y",
+    "accessibility",
+    "deaf",
+    "hard-of-hearing",
+    "haptic",
+    "vibrate",
+    "visual-alert",
+    "banner",
+    "flash",
+    "no-sound",
+    "inclusive"
+  ],
+  "author": "Auriukux",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Auriukux/deaf-signal.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Auriukux/deaf-signal/issues"
+  },
+  "homepage": "https://github.com/Auriukux/deaf-signal#readme"
+}
