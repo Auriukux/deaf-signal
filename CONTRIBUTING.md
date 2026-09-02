@@ -12,6 +12,8 @@ npm run demo
 
 Then open **http://localhost:3000** (or `/demo`). `index.html` / `serve.json` redirect to `examples/demo.html`.
 
+On a phone on the same Wi-Fi (or via a localhost tunnel), the demo is installable as a PWA from the browser / **Install app** button.
+
 Same server without the npm script:
 
 ```bash

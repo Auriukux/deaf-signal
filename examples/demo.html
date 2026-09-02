@@ -3,6 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0c1220" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="deaf-signal" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
   <title>deaf-signal — demonstracija</title>
   <style>
     :root {
@@ -284,6 +290,36 @@
       outline-offset: 3px;
     }
 
+
+    #btn-install {
+      display: none;
+      width: 100%;
+      margin-top: 12px;
+      appearance: none;
+      border: 1px solid rgba(94, 200, 255, 0.35);
+      border-radius: 6px;
+      padding: 12px 16px;
+      font-size: 0.92rem;
+      font-weight: 650;
+      letter-spacing: -0.01em;
+      cursor: pointer;
+      color: var(--fg);
+      text-align: center;
+      background: var(--accent-soft);
+      box-shadow: 0 1px 0 var(--glass-highlight) inset;
+      transition: background 140ms var(--ease), filter 140ms var(--ease);
+    }
+
+    #btn-install:hover {
+      background: rgba(94, 200, 255, 0.22);
+      filter: brightness(1.05);
+    }
+
+    #btn-install:focus-visible {
+      outline: 2px solid var(--ring);
+      outline-offset: 3px;
+    }
+
     .status {
       margin-top: 18px;
       padding: 14px 16px;
@@ -362,6 +398,8 @@
       <button type="button" id="btn-pulse" class="secondary" data-i18n="btnPulse"></button>
     </div>
 
+    <button type="button" id="btn-install" data-i18n="btnInstall" hidden></button>
+
     <div class="status">
       <span class="status-label" data-i18n="statusLabel">Hint</span>
       <p class="hint" data-i18n-html="hint"></p>
@@ -397,6 +435,7 @@
         combo: "Skubus įspėjimas — patikrinkite pranešimą!",
         vibrateFail: "Vibracija ir drebėjimas nepalaikomi šiame kontekste.",
         langGroup: "Kalba",
+        btnInstall: "Įdiegti programėlę",
       },
       en: {
         title: "deaf-signal — demo",
@@ -416,6 +455,7 @@
         combo: "Urgent alert — check the message!",
         vibrateFail: "Vibration and shake are not supported in this context.",
         langGroup: "Language",
+        btnInstall: "Install app",
       },
     };
 
@@ -480,6 +520,40 @@
     document.getElementById("btn-pulse").addEventListener("click", () => {
       const card = document.querySelector(".card");
       pulseBorder(card, { color: "#5ec8ff", times: 3, durationMs: 1000 });
+    });
+
+    // PWA: service worker + optional install prompt
+    if (
+      "serviceWorker" in navigator &&
+      (location.protocol === "https:" ||
+        location.hostname === "localhost" ||
+        location.hostname === "127.0.0.1")
+    ) {
+      navigator.serviceWorker.register("./sw.js", { scope: "./" }).catch(() => {});
+    }
+
+    let deferredPrompt = null;
+    const installBtn = document.getElementById("btn-install");
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      installBtn.hidden = false;
+      installBtn.style.display = "block";
+    });
+    window.addEventListener("appinstalled", () => {
+      deferredPrompt = null;
+      installBtn.hidden = true;
+      installBtn.style.display = "none";
+    });
+    installBtn.addEventListener("click", async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      try {
+        await deferredPrompt.userChoice;
+      } catch (_) {}
+      deferredPrompt = null;
+      installBtn.hidden = true;
+      installBtn.style.display = "none";
     });
   </script>
 </body>
