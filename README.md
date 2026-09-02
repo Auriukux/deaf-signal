@@ -215,13 +215,13 @@ Browsers only grant permission after a **user gesture**. True OS-level backgroun
 
 ### Optional mic loud listen
 
-`startLoudListen(opts?)` is an **optional** helper: it asks for microphone permission, measures RMS via Web Audio (`AnalyserNode`, fftSize 2048), and fires only on **strong** peaks (default threshold **0.45** RMS, cooldown `minIntervalMs` 2500). It is **not** a sound classifier — no ML, no cloud — just a high bar so quiet rooms / soft speech should not trip. Intended cues: door slam, shout, siren nearby. Override `threshold` if needed. On exceed it can call `onLoud({ level, rms })` and/or auto `runAlert("urgent"|"siren")` (which may also `notifyAlert` when Notification permission is already granted). Always call `stopLoudListen()` / `controller.stop()` to release the mic. Requires a secure context (HTTPS / localhost).
+`startLoudListen(opts?)` is an **optional** helper: it asks for microphone permission, measures RMS via Web Audio (`AnalyserNode`, fftSize 2048), and fires only on **strong** peaks (default threshold **0.35** RMS, cooldown `minIntervalMs` 2500). It is **not** a sound classifier — no ML, no cloud — just a high bar so quiet rooms / soft speech should not trip. Intended cues: door slam, shout, siren nearby. Override `threshold` if needed. On exceed it can call `onLoud({ level, rms })` and/or auto `runAlert("urgent"|"siren")` (which may also `notifyAlert` when Notification permission is already granted). Always call `stopLoudListen()` / `controller.stop()` to release the mic. Requires a secure context (HTTPS / localhost).
 
 ```js
 import { startLoudListen, stopLoudListen, DEFAULT_LOUD_THRESHOLD } from "deaf-signal";
 
 const ctrl = await startLoudListen({
-  threshold: DEFAULT_LOUD_THRESHOLD, // 0.45 — strong only
+  threshold: DEFAULT_LOUD_THRESHOLD, // 0.35 — strong only
   onLoud: ({ rms }) => console.log("loud", rms),
   alert: "urgent",
 });

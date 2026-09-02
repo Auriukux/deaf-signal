@@ -13,7 +13,7 @@ import { getNotifyPermission, notifyAlert } from "./notify.js";
  * does not trip; override via `threshold` when you need a lower bar.
  * @type {number}
  */
-export const DEFAULT_LOUD_THRESHOLD = 0.45;
+export const DEFAULT_LOUD_THRESHOLD = 0.35;
 
 /** Default cooldown between loud triggers (ms). */
 export const DEFAULT_MIN_INTERVAL_MS = 2500;

@@ -90,7 +90,7 @@ import {
 describe("listen helpers", () => {
   it("exports a high default RMS threshold", () => {
     assert.equal(typeof DEFAULT_LOUD_THRESHOLD, "number");
-    assert.ok(DEFAULT_LOUD_THRESHOLD >= 0.4);
+    assert.ok(DEFAULT_LOUD_THRESHOLD >= 0.3);
     assert.ok(DEFAULT_LOUD_THRESHOLD <= 1);
     assert.equal(DEFAULT_MIN_INTERVAL_MS, 2500);
   });
