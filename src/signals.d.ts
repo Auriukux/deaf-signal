@@ -13,6 +13,17 @@ export const SHAKE_AMPLITUDE_MAX: 64;
 /** Clamp shake amplitude to 2–64 (default 16). */
 export function clampShakeAmplitude(amplitudePx?: unknown): number;
 
+/**
+ * Immediately invoke a previous flashScreen resolve (if any).
+ * Used so overlapping flashes never leave the first Promise hanging.
+ */
+export function settleFlashResolve(
+  previousResolve: (() => void) | null | undefined
+): null;
+
+/** Default banner close aria-label from `<html lang>` (`lt*` → "Uždaryti"). */
+export function defaultBannerCloseLabel(): string;
+
 export interface FlashScreenOptions {
   /** Overlay background color (auto contrast when omitted) */
   color?: string | null;
@@ -29,7 +40,7 @@ export interface ShowBannerOptions {
   level?: AlertLevel;
   /** Auto-dismiss delay; 0 = stay until closed (default 3000) */
   durationMs?: number;
-  /** Close button aria-label (default "Close") */
+  /** Close button aria-label (default from html lang: lt* → "Uždaryti", else "Close") */
   closeLabel?: string;
 }
 
@@ -105,6 +116,7 @@ export function isVibrateSupported(): boolean;
 /**
  * Briefly flash the viewport with a solid overlay color.
  * When `color` is omitted, picks contrast via {@link contrastFlashColor}.
+ * Overlapping calls reuse one overlay and immediately resolve the prior Promise.
  */
 export function flashScreen(opts?: FlashScreenOptions): Promise<void>;
 

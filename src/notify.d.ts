@@ -22,8 +22,12 @@ export interface NotifyAlertOptions {
   urgency?: NotificationUrgency | string;
   /** Notification tag (replaces prior with same tag) */
   tag?: string;
-  /** Notification icon URL */
-  icon?: string;
+  /**
+   * Notification icon URL.
+   * Omit to use `./icons/icon-192.png` relative to the current page (demo / Pages).
+   * Pass `false` to skip an icon. Library consumers should usually pass an absolute URL.
+   */
+  icon?: string | false;
   /** Pattern for notification + in-page vibrate */
   vibrate?: number | number[];
   /** When visible: flash the screen (default true) */
@@ -49,6 +53,14 @@ export interface NotifyAlertResult {
   notification: Notification | null;
   visibleCues: boolean;
 }
+
+/**
+ * Resolve Notification icon: `false` → omit; string → as-is; omitted →
+ * `./icons/icon-192.png` relative to the page.
+ */
+export function resolveNotifyIcon(
+  icon?: string | false | null
+): string | undefined;
 
 /** @returns whether the Notification API exists */
 export function isNotificationSupported(): boolean;

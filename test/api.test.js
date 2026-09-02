@@ -30,7 +30,11 @@ import {
   clampShakeAmplitude,
   SHAKE_AMPLITUDE_MIN,
   SHAKE_AMPLITUDE_MAX,
+  settleFlashResolve,
+  defaultBannerCloseLabel,
 } from "../src/signals.js";
+
+import { resolveNotifyIcon } from "../src/notify.js";
 
 import {
   isListenSupported,
@@ -138,6 +142,57 @@ describe("signals pure helpers", () => {
     assert.equal(clampShakeAmplitude("nope"), 16);
     assert.equal(clampShakeAmplitude(10), 10);
     assert.equal(clampShakeAmplitude(32), 32);
+  });
+
+  it("settleFlashResolve invokes prior resolve so overlapping flashes do not hang", () => {
+    let called = 0;
+    const prev = () => {
+      called += 1;
+    };
+    assert.equal(settleFlashResolve(prev), null);
+    assert.equal(called, 1);
+    assert.equal(settleFlashResolve(null), null);
+    assert.equal(settleFlashResolve(undefined), null);
+    assert.equal(called, 1);
+  });
+
+  it("defaultBannerCloseLabel is Close without lt html lang (Node)", () => {
+    assert.equal(defaultBannerCloseLabel(), "Close");
+  });
+
+  it("defaultBannerCloseLabel uses Uždaryti when html lang is lt", () => {
+    const prevDoc = globalThis.document;
+    globalThis.document = { documentElement: { lang: "lt-LT" } };
+    try {
+      assert.equal(defaultBannerCloseLabel(), "Uždaryti");
+    } finally {
+      if (prevDoc === undefined) delete globalThis.document;
+      else globalThis.document = prevDoc;
+    }
+  });
+});
+
+describe("notify icon helper", () => {
+  it("resolveNotifyIcon: false skips; string kept; omitted needs page base", () => {
+    assert.equal(resolveNotifyIcon(false), undefined);
+    assert.equal(resolveNotifyIcon("/my-icon.png"), "/my-icon.png");
+    // No document.baseURI / location in Node → undefined default
+    assert.equal(resolveNotifyIcon(undefined), undefined);
+    assert.equal(resolveNotifyIcon(null), undefined);
+  });
+
+  it("resolveNotifyIcon defaults to ./icons/icon-192.png relative to baseURI", () => {
+    const prevDoc = globalThis.document;
+    globalThis.document = { baseURI: "https://example.com/examples/demo.html" };
+    try {
+      assert.equal(
+        resolveNotifyIcon(undefined),
+        "https://example.com/examples/icons/icon-192.png"
+      );
+    } finally {
+      if (prevDoc === undefined) delete globalThis.document;
+      else globalThis.document = prevDoc;
+    }
   });
 });
 
