@@ -82,6 +82,10 @@ The demo UI has an LT | EN language toggle (choice saved in `localStorage`); the
 
 **PWA:** with `npm run demo` reachable on your phone (same Wi-Fi or a localhost tunnel), open the demo and use the browser / **Install app** prompt to add deaf-signal to the home screen. Installed PWAs are the realistic path for background Notification alerts when the tab is not focused.
 
+## TypeScript
+
+The package ships with TypeScript declaration files (`src/*.d.ts`). No separate `@types` package is needed — editors and `tsc` pick up types from `"types": "./src/index.d.ts"` and the `exports` `types` conditions.
+
 ## Usage
 
 ```js

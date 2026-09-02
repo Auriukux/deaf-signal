@@ -5,12 +5,33 @@
   "type": "module",
   "main": "./src/index.js",
   "module": "./src/index.js",
+  "types": "./src/index.d.ts",
   "exports": {
-    ".": "./src/index.js",
-    "./signals": "./src/signals.js",
-    "./presets": "./src/presets.js",
-    "./notify": "./src/notify.js",
-    "./alerts": "./src/alerts.js"
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js",
+      "default": "./src/index.js"
+    },
+    "./signals": {
+      "types": "./src/signals.d.ts",
+      "import": "./src/signals.js",
+      "default": "./src/signals.js"
+    },
+    "./presets": {
+      "types": "./src/presets.d.ts",
+      "import": "./src/presets.js",
+      "default": "./src/presets.js"
+    },
+    "./notify": {
+      "types": "./src/notify.d.ts",
+      "import": "./src/notify.js",
+      "default": "./src/notify.js"
+    },
+    "./alerts": {
+      "types": "./src/alerts.d.ts",
+      "import": "./src/alerts.js",
+      "default": "./src/alerts.js"
+    }
   },
   "files": [
     "src",
