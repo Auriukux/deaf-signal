@@ -76,7 +76,7 @@ await shakeElement("main", { reduceMotion: true });
 Named patterns live in `src/presets.js` (also re-exported from the package root):
 
 | Export | Pattern (ms) | Typical use |
-| --- | --- | --- |
+| --- | --- |
 | `PATTERN_CALL` | `[300, 120, 300, 120, 300]` | Incoming call / ring cue |
 | `PATTERN_MESSAGE` | `[100, 80, 100]` | New message / notification |
 | `PATTERN_URGENT` | `[200, 80, 200, 80, 200, 80, 500]` | Urgent / alarm |
@@ -97,17 +97,32 @@ The demo script lives **inside the package**, so how you run it depends on how y
 
 After `npm i github:Auriukux/deaf-signal` in a parent project:
 
+Cross-platform (recommended — works in PowerShell, cmd.exe, and bash):
+
 ```bash
 npm run demo --prefix node_modules/deaf-signal
 ```
 
-Or:
+PowerShell alternative:
 
-```bash
-cd node_modules/deaf-signal && npm run demo
+```powershell
+cd node_modules\deaf-signal; npm run demo
 ```
 
-(`npm run demo` from the parent folder fails with **Missing script** — the script is not on the parent `package.json`.)
+Or two lines:
+
+```powershell
+cd node_modules\deaf-signal
+npm run demo
+```
+
+cmd.exe / bash alternative:
+
+```bat
+cd node_modules\deaf-signal && npm run demo
+```
+
+(`npm run demo` from the parent folder fails with **Missing script** — the script is not on the parent `package.json`. PowerShell also rejects `&&` in older versions, so prefer `--prefix` or `;`.)
 
 ### Clone / develop
 
@@ -138,5 +153,5 @@ MIT © Auriukux
 `deaf-signal` — maža ESM biblioteka **vizualiems ir haptic (vibracijos / drebėjimo) įspėjimams**.
 Tinka prieinamumui kurtiesiems / neprigirdintiems.
 
-Demo: priklausomybė — `npm run demo --prefix node_modules/deaf-signal` (arba `cd node_modules/deaf-signal && npm run demo`); klonuojant — `npm run demo` → `http://localhost:3000` (arba `/demo`). Viršuje — **LT | EN** perjungimas.
+Demo: priklausomybė — `npm run demo --prefix node_modules/deaf-signal` (cross-platform; PowerShell: `cd node_modules\deaf-signal; npm run demo`); klonuojant — `npm run demo` → `http://localhost:3000` (arba `/demo`). Viršuje — **LT | EN** perjungimas.
 Skubus (urgent) flash — raudonas; jei vibracija neveikia (pvz. desktop), veikia vizualus drebėjimas.
