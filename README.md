@@ -96,6 +96,8 @@ import {
   isVibrateSupported,
   requestNotifyPermission,
   notifyAlert,
+  runAlert,
+  getAlert,
 } from "deaf-signal";
 
 // Auto contrast flash (white on dark backgrounds)
@@ -127,6 +129,10 @@ await notifyAlert("Incoming alert", {
   shake: true,
   combo: true,
 });
+
+// Product-level presentation presets (siren / horn / door / …)
+await runAlert("siren");
+await runAlert("horn", { message: "Horn nearby!" });
 ```
 
 ## API
@@ -144,6 +150,8 @@ await notifyAlert("Incoming alert", {
 | `requestNotifyPermission()` | Request Notification permission (`granted` / `denied` / … / `unsupported`) |
 | `notifyAlert(title, opts?)` | System Notification when permitted; when the page is visible also flash / shake / combo |
 | `isNotificationSupported()` / `getNotifyPermission()` | Feature / permission helpers |
+| `getAlert(name)` | Look up a product alert preset (`call` / `message` / `door` / `siren` / `horn` / `urgent`) |
+| `runAlert(name, opts?)` | Run preset via `alertCombo` + optional `notifyAlert` when Notification permission is granted |
 
 `flashScreen`, `pulseBorder`, `shakeElement`, and `alertCombo` accept optional `reduceMotion: boolean`. When omitted, they follow the OS `prefers-reduced-motion: reduce` media query.
 
@@ -165,6 +173,30 @@ vibratePattern(PATTERN_MESSAGE);
 vibratePattern(getPreset("urgent"));
 ```
 
+
+### Product alert presets
+
+Named **presentation** presets live in `src/alerts.js` (also re-exported from the package root). They bundle banner copy, severity, flash color, vibrate pattern, and shake options for common danger / event cues your app may already detect — **not** a sound classifier (no microphone, no ML).
+
+| Export | Default EN message | Level | Typical use |
+| --- | --- | --- | --- |
+| `ALERT_CALL` | Incoming call | `warn` | Ring / call cue |
+| `ALERT_MESSAGE` | New message | `info` | Soft notification |
+| `ALERT_DOOR` | Door / doorbell | `warn` | Doorbell / knock |
+| `ALERT_SIREN` | Siren detected nearby | `urgent` | Emergency siren presentation |
+| `ALERT_HORN` | Horn / vehicle alert | `urgent` | Vehicle horn presentation |
+| `ALERT_URGENT` | Urgent alert | `urgent` | Generic high-priority |
+| `ALERTS` / `getAlert(name)` / `runAlert(name, opts?)` | map / lookup / run | | `runAlert("siren")` |
+
+```js
+import { runAlert, getAlert, ALERT_DOOR } from "deaf-signal";
+
+await runAlert("door");
+console.log(getAlert("horn").vibratePattern);
+await runAlert("call", { message: ALERT_DOOR.message }); // override freely
+```
+
+Existing `PATTERN_*` / `getPreset()` vibrate-only presets remain unchanged.
 
 ### Background notifications
 
