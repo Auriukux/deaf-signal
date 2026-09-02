@@ -1,0 +1,6 @@
+{
+  "redirects": [
+    { "source": "/demo", "destination": "/examples/demo.html" },
+    { "source": "/demo/", "destination": "/examples/demo.html" }
+  ]
+}
