@@ -91,6 +91,8 @@ npx --yes serve .
 
 The demo UI has an LT | EN language toggle (choice saved in `localStorage`); the library API is English. With **Reduce motion** enabled, flash and pulse animations are skipped or softened automatically. Desktop browsers often expose Vibration API that does nothing — with `shakeFallback` (default on), visual shake always runs so the cue is visible.
 
+`/` and `/demo` redirect to the demo page via `index.html` / `serve.json`.
+
 ## Why
 
 Many web apps still signal only with sound. This package makes it easy to add **sight + touch** cues so alerts are usable without hearing.
@@ -103,5 +105,8 @@ MIT © Auriukux
 
 ## Lietuviškai (trumpai)
 
-`deaf-signal` — maża ESM biblioteka **vizualiems ir haptic (vibracijos) ispêjimams be garso**.  
-Tinka prieinamumui kurtiesiems / neprigirdintiems. Atidarykite `examples/demo.html` demonstracijai.
+`deaf-signal` — maža ESM biblioteka **vizualiems ir haptic (vibracijos / drebėjimo) įspėjimams**.
+Tinka prieinamumui kurtiesiems / neprigirdintiems.
+
+Demo: `npm run demo` → `http://localhost:3000` (arba `/demo`). Viršuje — **LT | EN** perjungimas.
+Skubus (urgent) flash — raudonas; jei vibracija neveikia (pvz. desktop), veikia vizualus drebėjimas.
