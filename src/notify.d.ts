@@ -1,5 +1,6 @@
 /**
  * Permission-based Notification alerts with visual + haptic cues when the page is visible.
+ * Prefers Service Worker showNotification when a controlling SW exists.
  * @module deaf-signal/notify
  */
 
@@ -50,6 +51,10 @@ export interface NotifyAlertOptions {
 
 export interface NotifyAlertResult {
   permission: NotifyPermission | string;
+  /**
+   * Page `Notification` instance when using the page path; `null` when shown via
+   * Service Worker `registration.showNotification` (or on failure / no-op).
+   */
   notification: Notification | null;
   visibleCues: boolean;
 }
@@ -76,8 +81,15 @@ export function getNotifyPermission(): NotifyPermission;
 export function requestNotifyPermission(): Promise<NotifyPermission>;
 
 /**
+ * True when a controlling Service Worker is active (installed PWA / registered SW).
+ * When true, `notifyAlert` prefers `registration.showNotification`.
+ */
+export function hasControllingServiceWorker(): boolean;
+
+/**
  * Background / permission-based alert.
- * System Notification when permitted; when visible also flash / shake / combo.
+ * Prefers SW `showNotification` when a controlling SW exists; else page `Notification`.
+ * When visible also flash / shake / combo.
  */
 export function notifyAlert(
   title: string,

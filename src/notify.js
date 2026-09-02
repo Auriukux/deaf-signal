@@ -1,6 +1,8 @@
 /**
  * Permission-based Notification alerts with visual + haptic cues when the page is visible.
- * Graceful no-ops when the Notification API is missing or permission is denied.
+ * Prefers Service Worker `showNotification` when a controlling SW exists; otherwise
+ * falls back to page `new Notification(...)`. Graceful no-ops when the Notification
+ * API is missing or permission is denied.
  * @module deaf-signal/notify
  */
 
@@ -106,15 +108,11 @@ export function resolveNotifyIcon(icon) {
 }
 
 /**
- * Show a system Notification when permitted.
- * @param {string} title
+ * Build NotificationOptions shared by SW showNotification and page Notification.
  * @param {object} opts
- * @returns {Notification|null}
+ * @returns {NotificationOptions}
  */
-function showSystemNotification(title, opts) {
-  if (!isNotificationSupported()) return null;
-  if (Notification.permission !== "granted") return null;
-
+function buildNotificationOptions(opts) {
   const {
     body = "",
     tag,
@@ -156,16 +154,63 @@ function showSystemNotification(title, opts) {
     }
   }
 
+  return nOpts;
+}
+
+/**
+ * True when a controlling Service Worker is active (installed PWA / registered SW).
+ * @returns {boolean}
+ */
+export function hasControllingServiceWorker() {
+  return (
+    typeof navigator !== "undefined" &&
+    "serviceWorker" in navigator &&
+    !!navigator.serviceWorker.controller
+  );
+}
+
+/**
+ * Show a system Notification when permitted.
+ * Prefers `ServiceWorkerRegistration.showNotification` when a controlling SW
+ * exists (better background / installed-PWA path); falls back to `new Notification`.
+ * @param {string} title
+ * @param {object} opts
+ * @returns {Promise<Notification|null>}
+ */
+async function showSystemNotification(title, opts) {
+  if (!isNotificationSupported()) return null;
+  if (Notification.permission !== "granted") return null;
+
+  const nOpts = buildNotificationOptions(opts);
+  const alertTitle = String(title || "Alert");
+  const minimal = {
+    body: nOpts.body,
+    tag: nOpts.tag,
+    icon: nOpts.icon,
+  };
+
+  // Prefer SW registration.showNotification when a controlling SW exists
+  if (hasControllingServiceWorker()) {
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      try {
+        await registration.showNotification(alertTitle, nOpts);
+      } catch {
+        await registration.showNotification(alertTitle, minimal);
+      }
+      // SW path does not return a Notification instance to the page
+      return null;
+    } catch {
+      /* fall through to page Notification */
+    }
+  }
+
   try {
-    return new Notification(String(title || "Alert"), nOpts);
+    return new Notification(alertTitle, nOpts);
   } catch {
     // Some browsers reject unknown option keys — retry with a minimal set
     try {
-      return new Notification(String(title || "Alert"), {
-        body: body || undefined,
-        tag: tag || undefined,
-        icon: resolvedIcon,
-      });
+      return new Notification(alertTitle, minimal);
     } catch {
       return null;
     }
@@ -242,12 +287,15 @@ async function runVisibleCues(title, opts) {
 /**
  * Background / permission-based alert.
  *
- * - When `document` is **hidden**: relies on a system {@link Notification}
- *   (plus notification `vibrate` where the browser supports it).
+ * - When `document` is **hidden**: relies on a system notification via the
+ *   Service Worker (`registration.showNotification`) when a controlling SW exists,
+ *   otherwise page `new Notification` (plus notification `vibrate` where supported).
  * - When **visible**: runs flash / shake / combo via existing signals helpers;
  *   also shows a Notification when permission is already granted (optional tray cue).
  * - If the Notification API is missing or permission is not granted, visual cues
  *   still run when the page is visible; otherwise this is a graceful no-op.
+ * - SW path returns `notification: null` (no page Notification instance); page
+ *   path returns the `Notification` object when constructed successfully.
  *
  * @param {string} title Notification / alert title
  * @param {object} [opts]
@@ -285,7 +333,7 @@ export async function notifyAlert(title, opts = {}) {
       !hidden && opts.combo === true
         ? { ...opts, vibrate: false }
         : opts;
-    notification = showSystemNotification(title, notifyOpts);
+    notification = await showSystemNotification(title, notifyOpts);
   }
 
   if (!hidden) {
