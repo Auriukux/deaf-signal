@@ -1,7 +1,7 @@
 {
   "name": "deaf-signal",
   "version": "0.1.0",
-  "description": "Visual and haptic web alerts — no sound. Accessibility for deaf / hard-of-hearing.",
+  "description": "Visual and haptic web alerts \u2014 no sound. Accessibility for deaf / hard-of-hearing.",
   "type": "module",
   "main": "./src/index.js",
   "module": "./src/index.js",
@@ -31,6 +31,11 @@
       "types": "./src/alerts.d.ts",
       "import": "./src/alerts.js",
       "default": "./src/alerts.js"
+    },
+    "./listen": {
+      "types": "./src/listen.d.ts",
+      "import": "./src/listen.js",
+      "default": "./src/listen.js"
     }
   },
   "files": [

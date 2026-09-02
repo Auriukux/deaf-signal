@@ -339,6 +339,79 @@
       border: 1px solid rgba(148, 173, 214, 0.15);
     }
 
+
+    .listen-card {
+      margin-top: 0;
+    }
+
+    .listen-meter-wrap {
+      position: relative;
+      height: 14px;
+      border-radius: 4px;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(148, 173, 214, 0.2);
+      overflow: hidden;
+      margin: 4px 0 2px;
+    }
+
+    .listen-meter-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 3px;
+      background: linear-gradient(90deg, #2f7fe0, #5ec8ff 55%, #ef5350);
+      transition: width 80ms linear;
+    }
+
+    .listen-meter-threshold {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: rgba(255, 209, 102, 0.95);
+      box-shadow: 0 0 6px rgba(240, 162, 2, 0.55);
+      transform: translateX(-1px);
+      pointer-events: none;
+    }
+
+    .listen-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 0.78rem;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      margin-bottom: 4px;
+    }
+
+    .listen-status {
+      margin: 2px 0 0;
+      font-size: 0.86rem;
+      color: var(--muted);
+      line-height: 1.45;
+      min-height: 1.3em;
+    }
+
+    .listen-status.fired {
+      color: #ffd166;
+      font-weight: 650;
+    }
+
+    .listen-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .listen-row > button {
+      text-align: center;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .listen-meter-fill {
+        transition: none;
+      }
+    }
+
     @media (prefers-reduced-motion: reduce) {
       .lang-toggle button,
       .card > button {
@@ -391,6 +464,25 @@
       <button type="button" id="btn-alert-siren" class="urgent" data-i18n="btnAlertSiren"></button>
     </div>
 
+
+    <p class="lead" style="margin-top:22px;margin-bottom:10px" data-i18n="listenLead"></p>
+    <div class="card listen-card" id="loud-listen">
+      <p class="listen-meta">
+        <span data-i18n="listenLevelLabel">Level</span>
+        <span id="listen-level-readout">0%</span>
+      </p>
+      <div class="listen-meter-wrap" aria-hidden="true">
+        <div class="listen-meter-fill" id="listen-meter-fill"></div>
+        <div class="listen-meter-threshold" id="listen-meter-threshold"></div>
+      </div>
+      <p class="listen-status" id="listen-status" data-i18n="listenIdle"></p>
+      <div class="listen-row">
+        <button type="button" id="btn-listen-start" class="warn" data-i18n="btnListenStart"></button>
+        <button type="button" id="btn-listen-stop" class="secondary" data-i18n="btnListenStop"></button>
+      </div>
+      <p class="hint" style="margin:4px 0 0" data-i18n="listenHint"></p>
+    </div>
+
     <button type="button" id="btn-install" data-i18n="btnInstall" hidden></button>
 
     <div class="status">
@@ -410,6 +502,10 @@
       getNotifyPermission,
       isNotificationSupported,
       runAlert,
+      startLoudListen,
+      stopLoudListen,
+      isListenSupported,
+      DEFAULT_LOUD_THRESHOLD,
     } from "../src/index.js";
 
     const LANG_KEY = "deaf-signal-demo-lang";
@@ -451,6 +547,16 @@
         alertCallMsg: "Įeinantis skambutis",
         alertDoorMsg: "Durys / skambutis į duris",
         alertHornMsg: "Signalas / transporto įspėjimas",
+        listenLead: "Mikrofono garsus garsas (nebūtina) — tik stiprus slenkstis, ne klasifikatorius:",
+        btnListenStart: "Įjungti klausymą",
+        btnListenStop: "Stabdyti",
+        listenLevelLabel: "Lygis",
+        listenIdle: "Laukia…",
+        listenListening: "Klauso — tik stiprūs garsai paleidžia įspėjimą.",
+        listenFired: "Aptiktas stiprus garsas!",
+        listenDenied: "Mikrofono leidimas atmestas arba nepalaikomas.",
+        listenUnsupported: "Mikrofono klausymas nepalaikomas šiame kontekste (reikia HTTPS / localhost).",
+        listenHint: "Suveikia tik stiprūs garsai (dūris, šauksmas, sirena šalia) — šnabždesys neturėtų paleisti.",
         alertSirenMsg: "Netoliese sirena",
       },
       en: {
@@ -489,6 +595,16 @@
         alertCallMsg: "Incoming call",
         alertDoorMsg: "Door / doorbell",
         alertHornMsg: "Horn / vehicle alert",
+        listenLead: "Mic loud sound (optional) — strong threshold only, not a classifier:",
+        btnListenStart: "Start listening",
+        btnListenStop: "Stop",
+        listenLevelLabel: "Level",
+        listenIdle: "Idle…",
+        listenListening: "Listening — only strong sounds trigger an alert.",
+        listenFired: "Strong sound detected!",
+        listenDenied: "Microphone permission denied or unsupported.",
+        listenUnsupported: "Mic listen is not supported here (needs HTTPS / localhost).",
+        listenHint: "Only strong sounds trigger (door slam, shout, siren nearby) — whispering should not.",
         alertSirenMsg: "Siren detected nearby",
       },
     };
@@ -618,6 +734,81 @@
     });
     document.getElementById("btn-alert-siren").addEventListener("click", () => {
       productAlert("siren", "alertSirenMsg");
+    });
+
+
+    // Optional mic loud-sound listen (strong RMS threshold)
+    const listenFill = document.getElementById("listen-meter-fill");
+    const listenThresholdMark = document.getElementById("listen-meter-threshold");
+    const listenReadout = document.getElementById("listen-level-readout");
+    const listenStatus = document.getElementById("listen-status");
+    let listenCtrl = null;
+
+    function setListenThresholdMark() {
+      const pct = Math.round(DEFAULT_LOUD_THRESHOLD * 100);
+      listenThresholdMark.style.left = pct + "%";
+    }
+    setListenThresholdMark();
+
+    function setListenStatus(key, fired) {
+      const t = strings[lang];
+      listenStatus.textContent = t[key] || "";
+      listenStatus.classList.toggle("fired", !!fired);
+      if (key === "listenIdle" || key === "listenListening") {
+        listenStatus.setAttribute("data-i18n", key);
+      } else {
+        listenStatus.removeAttribute("data-i18n");
+      }
+    }
+
+    function updateListenMeter(rms) {
+      const pct = Math.max(0, Math.min(100, Math.round(rms * 100)));
+      listenFill.style.width = pct + "%";
+      listenReadout.textContent = pct + "%";
+    }
+
+    document.getElementById("btn-listen-start").addEventListener("click", async () => {
+      if (!isListenSupported()) {
+        setListenStatus("listenUnsupported", false);
+        showBanner(strings[lang].listenUnsupported, { level: "warn", durationMs: 4000 });
+        return;
+      }
+      try {
+        stopLoudListen();
+        listenCtrl = await startLoudListen({
+          threshold: DEFAULT_LOUD_THRESHOLD,
+          minIntervalMs: 2500,
+          alert: "urgent",
+          alertOpts: {
+            shakeTarget: document.querySelector("#loud-listen") || document.querySelector(".card"),
+            message: strings[lang].listenFired,
+          },
+          onLevel: (rms) => updateListenMeter(rms),
+          onLoud: () => {
+            setListenStatus("listenFired", true);
+            setTimeout(() => {
+              if (listenCtrl && listenCtrl.active) setListenStatus("listenListening", false);
+            }, 1800);
+          },
+        });
+        setListenStatus("listenListening", false);
+      } catch (err) {
+        listenCtrl = null;
+        updateListenMeter(0);
+        const key =
+          err && (err.name === "NotAllowedError" || err.name === "PermissionDeniedError" || /denied/i.test(String(err.message)))
+            ? "listenDenied"
+            : "listenUnsupported";
+        setListenStatus(key, false);
+        showBanner(strings[lang][key], { level: "warn", durationMs: 4000 });
+      }
+    });
+
+    document.getElementById("btn-listen-stop").addEventListener("click", () => {
+      stopLoudListen();
+      listenCtrl = null;
+      updateListenMeter(0);
+      setListenStatus("listenIdle", false);
     });
 
     // PWA: service worker + optional install prompt

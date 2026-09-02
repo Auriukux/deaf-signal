@@ -1,5 +1,5 @@
 /* deaf-signal demo — minimal PWA service worker (installability / offline shell) */
-const CACHE = "deaf-signal-demo-v2";
+const CACHE = "deaf-signal-demo-v3";
 const examplesBase = new URL("./", self.location.href);
 const repoRoot = new URL("../", self.location.href);
 const PRECACHE_URLS = [
@@ -13,6 +13,7 @@ const PRECACHE_URLS = [
   new URL("src/presets.js", repoRoot).href,
   new URL("src/alerts.js", repoRoot).href,
   new URL("src/notify.js", repoRoot).href,
+  new URL("src/listen.js", repoRoot).href,
 ];
 const PRECACHE_SET = new Set(PRECACHE_URLS);
 
