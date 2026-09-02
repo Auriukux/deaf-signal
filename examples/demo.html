@@ -6,121 +6,362 @@
   <title>deaf-signal — demonstracija</title>
   <style>
     :root {
-      color-scheme: light dark;
-      --bg: #0f1419;
-      --card: #1a2332;
-      --fg: #e8eef7;
-      --muted: #8b9bb4;
-      --accent: #4fc3f7;
-      --btn: #1565c0;
-      --btn-warn: #f9a825;
-      --btn-urgent: #c62828;
-      --btn-fg: #fff;
+      color-scheme: dark;
+      --bg-0: #070b12;
+      --bg-1: #0c1220;
+      --fg: #eef3fb;
+      --muted: #93a0b8;
+      --muted-2: #6b7a94;
+      --accent: #5ec8ff;
+      --accent-soft: rgba(94, 200, 255, 0.14);
+      --glass: rgba(18, 28, 46, 0.62);
+      --glass-border: rgba(148, 173, 214, 0.18);
+      --glass-highlight: rgba(255, 255, 255, 0.06);
+      --btn-primary: linear-gradient(180deg, #2f7fe0 0%, #1b5fbc 100%);
+      --btn-primary-solid: #1e6fd0;
+      --btn-warn: linear-gradient(180deg, #ffd166 0%, #f0a202 100%);
+      --btn-warn-fg: #1a1408;
+      --btn-urgent: linear-gradient(180deg, #ef5350 0%, #c62828 100%);
+      --btn-secondary: rgba(255, 255, 255, 0.06);
+      --btn-secondary-border: rgba(148, 173, 214, 0.22);
+      --ring: #7dd3fc;
+      --shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+      --radius: 18px;
+      --ease: cubic-bezier(0.22, 1, 0.36, 1);
     }
+
     * { box-sizing: border-box; }
+
     body {
       margin: 0;
       min-height: 100vh;
-      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-      background: var(--bg);
+      font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
       color: var(--fg);
-      padding: 24px 16px 48px;
+      padding: 28px 16px 56px;
+      background:
+        radial-gradient(900px 480px at 12% -10%, rgba(56, 132, 255, 0.22), transparent 55%),
+        radial-gradient(700px 420px at 92% 8%, rgba(120, 80, 255, 0.16), transparent 50%),
+        radial-gradient(600px 380px at 50% 110%, rgba(34, 197, 180, 0.08), transparent 45%),
+        linear-gradient(180deg, var(--bg-1), var(--bg-0));
+      background-attachment: fixed;
     }
-    main { max-width: 560px; margin: 0 auto; }
+
+    main {
+      max-width: 560px;
+      margin: 0 auto;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 22px;
+    }
+
+    .brand-mark {
+      width: 28px;
+      height: 28px;
+      border-radius: 9px;
+      background:
+        linear-gradient(135deg, rgba(94, 200, 255, 0.95), rgba(99, 102, 241, 0.85));
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.18) inset,
+        0 8px 22px rgba(56, 132, 255, 0.35);
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .brand-mark::after {
+      content: "";
+      position: absolute;
+      inset: 7px;
+      border-radius: 3px;
+      border: 2px solid rgba(7, 11, 18, 0.55);
+      border-top-color: transparent;
+      border-left-color: transparent;
+      transform: rotate(-45deg) translateY(-1px);
+    }
+
+    .brand-word {
+      font-size: 0.92rem;
+      font-weight: 650;
+      letter-spacing: -0.02em;
+      color: var(--fg);
+    }
+
+    .brand-badge {
+      margin-left: 2px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border: 1px solid rgba(94, 200, 255, 0.28);
+      padding: 3px 7px;
+      border-radius: 999px;
+    }
+
     .header {
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 8px;
+      gap: 14px;
+      margin-bottom: 10px;
     }
-    h1 { font-size: 1.6rem; margin: 0; }
+
+    h1 {
+      font-size: clamp(1.55rem, 4.5vw, 1.85rem);
+      margin: 0;
+      letter-spacing: -0.035em;
+      font-weight: 720;
+      line-height: 1.15;
+    }
+
+    .subtitle {
+      margin: 0 0 8px;
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.45;
+      max-width: 36ch;
+    }
+
     .lang-toggle {
       display: inline-flex;
-      border: 1px solid #3a4a63;
-      border-radius: 8px;
-      overflow: hidden;
+      padding: 3px;
+      border: 1px solid var(--glass-border);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.04);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       flex-shrink: 0;
+      box-shadow: 0 1px 0 var(--glass-highlight) inset;
     }
+
     .lang-toggle button {
       appearance: none;
       border: none;
-      border-radius: 0;
-      padding: 6px 12px;
-      font-size: 0.8rem;
-      font-weight: 700;
+      border-radius: 999px;
+      padding: 7px 13px;
+      font-size: 0.78rem;
+      font-weight: 720;
+      letter-spacing: 0.04em;
       cursor: pointer;
       background: transparent;
       color: var(--muted);
       text-align: center;
+      min-width: 42px;
+      transition: background 160ms var(--ease), color 160ms var(--ease), box-shadow 160ms var(--ease);
     }
+
     .lang-toggle button[aria-pressed="true"] {
-      background: var(--btn);
-      color: var(--btn-fg);
+      background: linear-gradient(180deg, #2f7fe0, #1b5fbc);
+      color: #fff;
+      box-shadow: 0 6px 16px rgba(30, 111, 208, 0.35);
     }
+
+    .lang-toggle button:hover:not([aria-pressed="true"]) {
+      color: var(--fg);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
     .lang-toggle button:focus-visible {
-      outline: 3px solid var(--accent);
+      outline: 2px solid var(--ring);
       outline-offset: 2px;
       z-index: 1;
     }
-    .lead { color: var(--muted); margin: 0 0 24px; line-height: 1.5; }
-    .card {
-      background: var(--card);
-      border-radius: 12px;
-      padding: 20px;
-      display: grid;
-      gap: 12px;
+
+    .lead {
+      color: var(--muted);
+      margin: 0 0 22px;
+      line-height: 1.55;
+      font-size: 0.98rem;
     }
+
+    .card {
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius);
+      padding: 18px;
+      display: grid;
+      gap: 10px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px) saturate(1.2);
+      -webkit-backdrop-filter: blur(18px) saturate(1.2);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
     .card > button {
       appearance: none;
-      border: none;
-      border-radius: 8px;
+      border: 1px solid transparent;
+      border-radius: 12px;
       padding: 14px 16px;
-      font-size: 1rem;
-      font-weight: 600;
+      font-size: 0.98rem;
+      font-weight: 650;
+      letter-spacing: -0.01em;
       cursor: pointer;
-      background: var(--btn);
-      color: var(--btn-fg);
+      color: #fff;
       text-align: left;
+      background: var(--btn-primary);
+      box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.18) inset,
+        0 8px 18px rgba(27, 95, 188, 0.28);
+      transition:
+        transform 140ms var(--ease),
+        box-shadow 140ms var(--ease),
+        filter 140ms var(--ease),
+        background 140ms var(--ease);
     }
-    .card > button.warn { background: var(--btn-warn); color: #1a1a1a; }
-    .card > button.urgent { background: var(--btn-urgent); }
+
+    .card > button:hover {
+      filter: brightness(1.06);
+      box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.22) inset,
+        0 12px 24px rgba(27, 95, 188, 0.36);
+    }
+
+    .card > button:active {
+      transform: translateY(1px) scale(0.992);
+      filter: brightness(0.97);
+    }
+
+    .card > button.warn {
+      background: var(--btn-warn);
+      color: var(--btn-warn-fg);
+      box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.35) inset,
+        0 8px 18px rgba(240, 162, 2, 0.28);
+    }
+
+    .card > button.warn:hover {
+      box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.4) inset,
+        0 12px 24px rgba(240, 162, 2, 0.36);
+    }
+
+    .card > button.urgent {
+      background: var(--btn-urgent);
+      box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.18) inset,
+        0 8px 18px rgba(198, 40, 40, 0.32);
+    }
+
+    .card > button.urgent:hover {
+      box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.22) inset,
+        0 12px 24px rgba(198, 40, 40, 0.4);
+    }
+
+    .card > button.secondary {
+      background: var(--btn-secondary);
+      border-color: var(--btn-secondary-border);
+      color: var(--fg);
+      box-shadow: 0 1px 0 var(--glass-highlight) inset;
+    }
+
+    .card > button.secondary:hover {
+      background: rgba(255, 255, 255, 0.09);
+      box-shadow: 0 1px 0 var(--glass-highlight) inset, 0 8px 18px rgba(0, 0, 0, 0.2);
+    }
+
     .card > button:focus-visible {
-      outline: 3px solid var(--accent);
-      outline-offset: 2px;
+      outline: 2px solid var(--ring);
+      outline-offset: 3px;
     }
+
+    .status {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid var(--glass-border);
+      background: rgba(255, 255, 255, 0.035);
+      box-shadow: 0 1px 0 var(--glass-highlight) inset;
+    }
+
+    .status-label {
+      display: block;
+      font-size: 0.7rem;
+      font-weight: 720;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+
     .hint {
-      margin-top: 20px;
-      font-size: 0.875rem;
+      margin: 0;
+      font-size: 0.86rem;
       color: var(--muted);
-      line-height: 1.5;
+      line-height: 1.55;
     }
+
     code {
-      font-size: 0.85em;
-      background: #0003;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.84em;
+      background: rgba(0, 0, 0, 0.35);
+      color: #d7e6ff;
       padding: 2px 6px;
-      border-radius: 4px;
+      border-radius: 6px;
+      border: 1px solid rgba(148, 173, 214, 0.15);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .lang-toggle button,
+      .card > button {
+        transition: none;
+      }
+      .card > button:hover,
+      .card > button:active {
+        transform: none;
+        filter: none;
+      }
     }
   </style>
 </head>
 <body>
   <main>
+    <div class="brand" aria-hidden="true">
+      <span class="brand-mark"></span>
+      <span class="brand-word">deaf-signal</span>
+      <span class="brand-badge" data-i18n="badge">a11y</span>
+    </div>
+
     <div class="header">
-      <h1>deaf-signal</h1>
+      <div>
+        <h1>deaf-signal</h1>
+        <p class="subtitle" data-i18n="subtitle"></p>
+      </div>
       <div class="lang-toggle" role="group" aria-label="Language">
         <button type="button" id="lang-lt" aria-pressed="true">LT</button>
         <button type="button" id="lang-en" aria-pressed="false">EN</button>
       </div>
     </div>
+
     <p class="lead" data-i18n="lead"></p>
+
     <div class="card">
       <button type="button" id="btn-flash" data-i18n="btnFlash"></button>
       <button type="button" id="btn-banner" class="warn" data-i18n="btnBanner"></button>
-      <button type="button" id="btn-vibrate" data-i18n="btnVibrate"></button>
+      <button type="button" id="btn-vibrate" class="secondary" data-i18n="btnVibrate"></button>
       <button type="button" id="btn-combo" class="urgent" data-i18n="btnCombo"></button>
-      <button type="button" id="btn-pulse" data-i18n="btnPulse"></button>
+      <button type="button" id="btn-pulse" class="secondary" data-i18n="btnPulse"></button>
     </div>
-    <p class="hint" data-i18n-html="hint"></p>
+
+    <div class="status">
+      <span class="status-label" data-i18n="statusLabel">Hint</span>
+      <p class="hint" data-i18n-html="hint"></p>
+    </div>
   </main>
   <script type="module">
     import {
@@ -136,6 +377,8 @@
     const strings = {
       lt: {
         title: "deaf-signal — demonstracija",
+        subtitle: "Produktinė demonstracija — vizualūs įspėjimai be garso.",
+        badge: "a11y",
         lead:
           "Vizualūs ir haptic (vibracijos) įspėjimai be garso — prieinamumas kurtiesiems ir neprigirdintiems.",
         btnFlash: "Mirksėti ekraną",
@@ -143,6 +386,7 @@
         btnVibrate: "Vibruoti / drebėti",
         btnCombo: "Kombinuotas įspėjimas",
         btnPulse: "Pulsuoti rėmelį",
+        statusLabel: "Pastaba",
         hint:
           "Vibracija arba vizualus drebėjimas — vibracija veikia daugelyje mobiliųjų Chrome / Android; darbalaukyje dažnai naudojamas vizualus drebėjimas. Atidarykite šį failą tiesiogiai arba per lokalų serverį. Importas: <code>../src/index.js</code>",
         banner: "⚠️ Dėmesio: svarbus pranešimas.",
@@ -152,6 +396,8 @@
       },
       en: {
         title: "deaf-signal — demo",
+        subtitle: "Product demo — visual alerts without sound.",
+        badge: "a11y",
         lead:
           "Visual and haptic alerts without relying on sound — accessibility for deaf / hard-of-hearing.",
         btnFlash: "Flash screen",
@@ -159,6 +405,7 @@
         btnVibrate: "Vibrate / shake",
         btnCombo: "Combined alert",
         btnPulse: "Pulse border",
+        statusLabel: "Hint",
         hint:
           "Vibration or visual shake — vibration works on many mobile Chrome / Android devices; desktop often uses visual shake. Open this file directly or via a local server. Import: <code>../src/index.js</code>",
         banner: "⚠️ Attention: important notice.",
@@ -228,10 +475,8 @@
 
     document.getElementById("btn-pulse").addEventListener("click", () => {
       const card = document.querySelector(".card");
-      pulseBorder(card, { color: "#4fc3f7", times: 3, durationMs: 1000 });
+      pulseBorder(card, { color: "#5ec8ff", times: 3, durationMs: 1000 });
     });
   </script>
 </body>
 </html>
-
-<!-- demo note 2026-09-02 -->
