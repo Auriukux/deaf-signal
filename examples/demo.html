@@ -27,7 +27,42 @@
       padding: 24px 16px 48px;
     }
     main { max-width: 560px; margin: 0 auto; }
-    h1 { font-size: 1.6rem; margin: 0 0 8px; }
+    .header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    h1 { font-size: 1.6rem; margin: 0; }
+    .lang-toggle {
+      display: inline-flex;
+      border: 1px solid #3a4a63;
+      border-radius: 8px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .lang-toggle button {
+      appearance: none;
+      border: none;
+      border-radius: 0;
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      background: transparent;
+      color: var(--muted);
+      text-align: center;
+    }
+    .lang-toggle button[aria-pressed="true"] {
+      background: var(--btn);
+      color: var(--btn-fg);
+    }
+    .lang-toggle button:focus-visible {
+      outline: 3px solid var(--accent);
+      outline-offset: 2px;
+      z-index: 1;
+    }
     .lead { color: var(--muted); margin: 0 0 24px; line-height: 1.5; }
     .card {
       background: var(--card);
@@ -36,7 +71,7 @@
       display: grid;
       gap: 12px;
     }
-    button {
+    .card > button {
       appearance: none;
       border: none;
       border-radius: 8px;
@@ -48,9 +83,9 @@
       color: var(--btn-fg);
       text-align: left;
     }
-    button.warn { background: var(--btn-warn); color: #1a1a1a; }
-    button.urgent { background: var(--btn-urgent); }
-    button:focus-visible {
+    .card > button.warn { background: var(--btn-warn); color: #1a1a1a; }
+    .card > button.urgent { background: var(--btn-urgent); }
+    .card > button:focus-visible {
       outline: 3px solid var(--accent);
       outline-offset: 2px;
     }
@@ -70,24 +105,22 @@
 </head>
 <body>
   <main>
-    <h1>deaf-signal</h1>
-    <p class="lead">
-      Vizualūs ir haptic (vibracijos) įspėjimai be garso —
-      prieinamumas kurtiesiems ir neprigirdintiems.
-    </p>
-    <div class="card">
-      <button type="button" id="btn-flash">Mirksėti ekraną (flash)</button>
-      <button type="button" id="btn-banner" class="warn">Rodyti juostą (banner)</button>
-      <button type="button" id="btn-vibrate">Vibruoti / drebėti</button>
-      <button type="button" id="btn-combo" class="urgent">Kombinuotas įspėjimas</button>
-      <button type="button" id="btn-pulse">Pulsuoti rėmelį (pulseBorder)</button>
+    <div class="header">
+      <h1>deaf-signal</h1>
+      <div class="lang-toggle" role="group" aria-label="Language">
+        <button type="button" id="lang-lt" aria-pressed="true">LT</button>
+        <button type="button" id="lang-en" aria-pressed="false">EN</button>
+      </div>
     </div>
-    <p class="hint">
-      Vibracija arba vizualus drebėjimas — vibracija veikia daugelyje mobiliųjų
-      Chrome / Android; darbalaukyje dažnai naudojamas vizualus drebėjimas.
-      Atidarykite šį failą tiesiogiai arba per lokalų serverį.
-      Importas: <code>../src/index.js</code>
-    </p>
+    <p class="lead" data-i18n="lead"></p>
+    <div class="card">
+      <button type="button" id="btn-flash" data-i18n="btnFlash"></button>
+      <button type="button" id="btn-banner" class="warn" data-i18n="btnBanner"></button>
+      <button type="button" id="btn-vibrate" data-i18n="btnVibrate"></button>
+      <button type="button" id="btn-combo" class="urgent" data-i18n="btnCombo"></button>
+      <button type="button" id="btn-pulse" data-i18n="btnPulse"></button>
+    </div>
+    <p class="hint" data-i18n-html="hint"></p>
   </main>
   <script type="module">
     import {
@@ -98,12 +131,76 @@
       pulseBorder,
     } from "../src/index.js";
 
+    const LANG_KEY = "deaf-signal-demo-lang";
+
+    const strings = {
+      lt: {
+        title: "deaf-signal — demonstracija",
+        lead:
+          "Vizualūs ir haptic (vibracijos) įspėjimai be garso — prieinamumas kurtiesiems ir neprigirdintiems.",
+        btnFlash: "Mirksėti ekraną (flash)",
+        btnBanner: "Rodyti juostą (banner)",
+        btnVibrate: "Vibruoti / drebėti",
+        btnCombo: "Kombinuotas įspėjimas",
+        btnPulse: "Pulsuoti rėmelį (pulseBorder)",
+        hint:
+          "Vibracija arba vizualus drebėjimas — vibracija veikia daugelyje mobiliųjų Chrome / Android; darbalaukyje dažnai naudojamas vizualus drebėjimas. Atidarykite šį failą tiesiogiai arba per lokalų serverį. Importas: <code>../src/index.js</code>",
+        banner: "⚠️ Dėmesio: svarbus pranešimas.",
+        combo: "Skubus įspėjimas — patikrinkite pranešimą!",
+        vibrateFail: "Vibracija ir drebėjimas nepalaikomi šiame kontekste.",
+        langGroup: "Kalba",
+      },
+      en: {
+        title: "deaf-signal — demo",
+        lead:
+          "Visual and haptic alerts without relying on sound — accessibility for deaf / hard-of-hearing.",
+        btnFlash: "Flash screen",
+        btnBanner: "Show banner",
+        btnVibrate: "Vibrate / shake",
+        btnCombo: "Combined alert",
+        btnPulse: "Pulse border",
+        hint:
+          "Vibration or visual shake — vibration works on many mobile Chrome / Android devices; desktop often uses visual shake. Open this file directly or via a local server. Import: <code>../src/index.js</code>",
+        banner: "⚠️ Attention: important notice.",
+        combo: "Urgent alert — check the message!",
+        vibrateFail: "Vibration and shake are not supported in this context.",
+        langGroup: "Language",
+      },
+    };
+
+    let lang =
+      localStorage.getItem(LANG_KEY) === "en" ||
+      localStorage.getItem(LANG_KEY) === "lt"
+        ? localStorage.getItem(LANG_KEY)
+        : "lt";
+
+    function applyLang(next) {
+      lang = next === "en" ? "en" : "lt";
+      localStorage.setItem(LANG_KEY, lang);
+      const t = strings[lang];
+      document.documentElement.lang = lang;
+      document.title = t.title;
+      document.querySelector(".lang-toggle").setAttribute("aria-label", t.langGroup);
+      document.getElementById("lang-lt").setAttribute("aria-pressed", String(lang === "lt"));
+      document.getElementById("lang-en").setAttribute("aria-pressed", String(lang === "en"));
+      document.querySelectorAll("[data-i18n]").forEach((el) => {
+        el.textContent = t[el.getAttribute("data-i18n")] || "";
+      });
+      document.querySelectorAll("[data-i18n-html]").forEach((el) => {
+        el.innerHTML = t[el.getAttribute("data-i18n-html")] || "";
+      });
+    }
+
+    document.getElementById("lang-lt").addEventListener("click", () => applyLang("lt"));
+    document.getElementById("lang-en").addEventListener("click", () => applyLang("en"));
+    applyLang(lang);
+
     document.getElementById("btn-flash").addEventListener("click", () => {
       flashScreen({ durationMs: 350 });
     });
 
     document.getElementById("btn-banner").addEventListener("click", () => {
-      showBanner("⚠️ Dėmesio: svarbus pranešimas.", {
+      showBanner(strings[lang].banner, {
         level: "warn",
         durationMs: 4000,
       });
@@ -115,7 +212,7 @@
         shakeFallback: true,
       });
       if (!ok) {
-        showBanner("Vibracija ir drebėjimas nepalaikomi šiame kontekste.", {
+        showBanner(strings[lang].vibrateFail, {
           level: "info",
           durationMs: 3500,
         });
@@ -123,7 +220,7 @@
     });
 
     document.getElementById("btn-combo").addEventListener("click", () => {
-      alertCombo("Skubus įspėjimas — patikrinkite pranešimą!", {
+      alertCombo(strings[lang].combo, {
         level: "urgent",
         shakeTarget: ".card",
       });
