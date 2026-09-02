@@ -1,5 +1,5 @@
-/* deaf-signal demo — minimal PWA service worker (installability / offline shell) */
-const CACHE = "deaf-signal-demo-v5";
+/* deaf-signal demo — minimal PWA service worker (installability / offline shell + notifications) */
+const CACHE = "deaf-signal-demo-v6";
 const examplesBase = new URL("./", self.location.href);
 /** Cache-first shell only (HTML / manifest / icons) — not live library modules */
 const SHELL_URLS = [
@@ -10,6 +10,7 @@ const SHELL_URLS = [
   new URL("icons/apple-touch-icon.png", examplesBase).href,
 ];
 const SHELL_SET = new Set(SHELL_URLS);
+const DEMO_URL = new URL("demo.html", examplesBase).href;
 
 function isSrcModule(url) {
   try {
@@ -77,4 +78,50 @@ self.addEventListener("fetch", (event) => {
 
   // Default: network
   event.respondWith(fetch(request));
+});
+
+/** Focus an open demo client, or open demo.html */
+function focusOrOpenDemo() {
+  return self.clients
+    .matchAll({ type: "window", includeUncontrolled: true })
+    .then((clientList) => {
+      for (const client of clientList) {
+        try {
+          const href = client.url || "";
+          if (
+            (href === DEMO_URL || href.startsWith(DEMO_URL) || /\/demo\.html(\?|#|$)/.test(href)) &&
+            "focus" in client
+          ) {
+            return client.focus();
+          }
+        } catch {
+          /* continue */
+        }
+      }
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(DEMO_URL);
+      }
+      return undefined;
+    });
+}
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  event.waitUntil(focusOrOpenDemo());
+});
+
+/**
+ * Page → SW message: { type: 'deaf-signal-notify', title, options }
+ * Shows a system notification via the service worker registration.
+ */
+self.addEventListener("message", (event) => {
+  const data = event.data;
+  if (!data || data.type !== "deaf-signal-notify") return;
+  const title = data.title != null ? String(data.title) : "Alert";
+  const options = data.options && typeof data.options === "object" ? data.options : {};
+  event.waitUntil(
+    self.registration.showNotification(title, options).catch(() => {
+      /* permission / platform may reject */
+    })
+  );
 });

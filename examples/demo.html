@@ -527,20 +527,20 @@
         btnPulse: "Pulsuoti rėmelį",
         statusLabel: "Pastaba",
         hint:
-          "Vibracija arba vizualus drebėjimas — vibracija veikia daugelyje mobiliųjų Chrome / Android; iPhone Safari <code>navigator.vibrate</code> neveikia (tik vizualus drebėjimas). Mirksėjimas ribojamas (fotosensityvumas / epilepsija). Foniniams pranešimams reikia Notification leidimo; tikras OS fonas dažnai reikalauja įdiegtos PWA. Importas: <code>../src/index.js</code>",
+          "Vibracija arba vizualus drebėjimas — vibracija veikia daugelyje mobiliųjų Chrome / Android; iPhone Safari <code>navigator.vibrate</code> neveikia (tik vizualus drebėjimas). Mirksėjimas ribojamas (fotosensityvumas / epilepsija). Foniniai pranešimai eina per Service Worker (geriau veikia įdiegus kaip PWA); skirtuką galima uždaryti fone; visiškai išjungta programėlė — OS riboja (ypač iOS). Importas: <code>../src/index.js</code>",
         banner: "⚠️ Dėmesio: svarbus pranešimas.",
         combo: "Skubus įspėjimas — patikrinkite pranešimą!",
         vibrateFail: "Vibracija ir drebėjimas nepalaikomi šiame kontekste.",
         langGroup: "Kalba",
         btnNotifyPerm: "Leisti pranešimus",
-        btnNotifyTest: "Foninis testas (perjunkite skirtuką)",
+        btnNotifyTest: "Foninis testas (SW / PWA)",
         notifyGranted: "Pranešimų leidimas suteiktas.",
         notifyDenied: "Pranešimai atmesti arba nepalaikomi.",
         notifyDefault: "Leidimas dar nesuteiktas — spauskite „Leisti pranešimus“.",
         notifyUnsupported: "Notification API šiame naršyklėje nepalaikomas.",
         notifyTitle: "deaf-signal",
-        notifyBody: "Foninis įspėjimas — perjunkite skirtuką ir patikrinkite.",
-        notifySent: "Po ~2.5 s — įspėjimas. Perjunkite skirtuką, kad pamatytumėte foninį pranešimą.",
+        notifyBody: "SW foninis įspėjimas — geriau veikia įdiegus kaip PWA.",
+        notifySent: "Po ~2.5 s — SW pranešimas. Geriau veikia įdiegus kaip PWA; skirtuką galima uždaryti fone; visiškai išjungta programėlė — OS riboja (ypač iOS).",
         btnInstall: "Įdiegti programėlę",
         productLead: "Rankiniai produkto signalai (sirena / kornas / durys / skambutis) — jūs paleidžiate; ne atpažinimas. Vizualu + vibracija, be ML:",
         btnAlertCall: "Skambutis",
@@ -578,20 +578,20 @@
         btnPulse: "Pulse border",
         statusLabel: "Hint",
         hint:
-          "Vibration or visual shake — works on many Chrome / Android devices; iPhone Safari <code>navigator.vibrate</code> does not (visual shake only). Flashes are rate-limited (photosensitive epilepsy warning). Background alerts need Notification permission; true OS background usually needs an installed PWA. Import: <code>../src/index.js</code>",
+          "Vibration or visual shake — works on many Chrome / Android devices; iPhone Safari <code>navigator.vibrate</code> does not (visual shake only). Flashes are rate-limited (photosensitive epilepsy warning). Background alerts use the Service Worker path (works better when installed as a PWA); the tab can be backgrounded; a fully killed app is still OS-limited (esp. iOS). Import: <code>../src/index.js</code>",
         banner: "⚠️ Attention: important notice.",
         combo: "Urgent alert — check the message!",
         vibrateFail: "Vibration and shake are not supported in this context.",
         langGroup: "Language",
         btnNotifyPerm: "Allow notifications",
-        btnNotifyTest: "Background test (switch tab)",
+        btnNotifyTest: "Background test (SW / PWA)",
         notifyGranted: "Notification permission granted.",
         notifyDenied: "Notifications denied or unsupported.",
         notifyDefault: "Permission not granted yet — tap “Allow notifications”.",
         notifyUnsupported: "Notification API is not supported in this browser.",
         notifyTitle: "deaf-signal",
-        notifyBody: "Background alert — switch tabs to verify.",
-        notifySent: "Alert in ~2.5s — switch tabs to see the background notification.",
+        notifyBody: "SW background alert — works better when installed as a PWA.",
+        notifySent: "SW alert in ~2.5s — works better when installed as a PWA; tab can be backgrounded; fully killed app is still OS-limited (esp. iOS).",
         btnInstall: "Install app",
         productLead: "Manual product cues (siren / horn / door / call) — you trigger them; not classifiers. Visual + haptic, no ML:",
         btnAlertCall: "Call",
@@ -717,7 +717,7 @@
       } else {
         demoBanner(t.notifySent, { level: "info", durationMs: 2500 });
       }
-      // Short delay so the user can switch tabs to exercise the background Notification path.
+      // Delay so the user can background the tab; notifyAlert prefers SW showNotification.
       await new Promise((r) => setTimeout(r, 2500));
       await notifyAlert(t.notifyTitle, {
         body: t.notifyBody,

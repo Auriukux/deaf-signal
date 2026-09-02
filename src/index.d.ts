@@ -44,6 +44,8 @@ export {
   notifyAlert,
   isNotificationSupported,
   getNotifyPermission,
+  hasControllingServiceWorker,
+  resolveNotifyIcon,
 } from "./notify.js";
 export type {
   NotifyPermission,

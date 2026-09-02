@@ -88,7 +88,7 @@ The demo UI has an LT | EN language toggle (choice saved in `localStorage`); the
 
 **GitHub Pages** (no serve.json redirects on hosting): open /, /demo/, or /examples/demo.html. Local npx serve still uses serve.json for / and /demo.
 
-**PWA:** with `npm run demo` reachable on your phone (same Wi-Fi or a localhost tunnel), open the demo and use the browser / **Install app** prompt to add deaf-signal to the home screen. Installed PWAs are the realistic path for background Notification alerts when the tab is not focused. A normal browser tab must stay alive (not discarded) for page-triggered Notifications; closing or unloading the tab stops that path.
+**PWA:** with `npm run demo` reachable on your phone (same Wi-Fi or a localhost tunnel), open the demo and use the browser / **Install app** prompt to add deaf-signal to the home screen. Installed PWAs are the realistic path for background Notification alerts when the tab is not focused. With a controlling Service Worker, `notifyAlert` uses `registration.showNotification` (SW path); without one it falls back to page `new Notification(...)`. A backgrounded tab can still show SW notifications while the SW is alive; a **fully killed** app remains OS-limited (especially on iOS).
 
 ## TypeScript
 
@@ -160,9 +160,8 @@ await runAlert("horn", { message: "Loud alert cue" });
 | `alertCombo(message, opts?)` | Flash + banner + vibrate/shake; urgent flash is always red `#e53935` when `flashColor` omitted (other levels use auto contrast) |
 | `pulseBorder(target, opts?)` | Pulse element border; static outline when reduced motion |
 | `requestNotifyPermission()` | Request Notification permission (`granted` / `denied` / … / `unsupported`) |
-| `notifyAlert(title, opts?)` | System Notification when permitted; when the page is visible also flash / shake / combo |
-| `isNotificationSupported()` / `getNotifyPermission()` | Feature / permission helpers |
-| `getAlert(name)` | Look up a product alert preset (`call` / `message` / `door` / `siren` / `horn` / `urgent`) |
+| `notifyAlert(title, opts?)` | System Notification when permitted (SW `showNotification` if controlling SW, else page `Notification`); when visible also flash / shake / combo |
+| `isNotificationSupported()` / `getNotifyPermission()` / `hasControllingServiceWorker()` | Feature / permission / SW helpers |
 | `runAlert(name, opts?)` | Run preset via `alertCombo` + optional `notifyAlert`; **unknown name → `false` + `console.warn`** (fail-closed) |
 | `isListenSupported()` / `getInputLevel()` | Feature helper / live RMS while listening |
 | `startLoudListen(opts?)` / `stopLoudListen()` | Optional mic **loud**-sound detect (Web Audio RMS); high threshold by default |
@@ -215,10 +214,13 @@ Existing `PATTERN_*` / `getPreset()` vibrate-only presets remain unchanged.
 
 ### Background notifications
 
-`requestNotifyPermission()` + `notifyAlert(title, opts?)` use the browser **Notification** API (zero deps). When the document is hidden, the system notification (and notification `vibrate` where supported) is the main cue. When the tab is visible, `notifyAlert` also calls the existing flash / shake / combo helpers (combo:true uses one haptic path via alertCombo and skips stacking Notification.vibrate while visible).
+`requestNotifyPermission()` + `notifyAlert(title, opts?)` use the browser **Notification** API (zero deps).
 
-Browsers only grant permission after a **user gesture**. True OS-level background delivery usually requires an **installed PWA** (and browser support) — a normal tab may pause or throttle when fully backgrounded, and the tab must remain alive for page-created Notifications (closing/discarding the tab ends that path). Missing Notification API → graceful no-ops for the notification part; visible visual cues still run.
+**SW path vs page Notification:** when a **controlling Service Worker** exists (`hasControllingServiceWorker()`), `notifyAlert` prefers `ServiceWorkerRegistration.showNotification` (better for backgrounded / installed PWA demos). Otherwise it falls back to page `new Notification(...)`. The demo SW (`examples/sw.js`) also handles `notificationclick` (focus/open the demo) and `message` events `{ type: 'deaf-signal-notify', title, options }`.
 
+When the document is hidden, the system notification (and notification `vibrate` where supported) is the main cue. When the tab is visible, `notifyAlert` also calls the existing flash / shake / combo helpers (combo:true uses one haptic path via alertCombo and skips stacking Notification.vibrate while visible).
+
+Browsers only grant permission after a **user gesture**. True OS-level background delivery usually requires an **installed PWA** (and browser support). A backgrounded tab can still deliver SW notifications while the worker is alive; a **fully killed** app is still OS-limited (especially iOS). Page-only Notifications need the tab to stay alive. Missing Notification API → graceful no-ops for the notification part; visible visual cues still run.
 
 ### Optional mic loud listen
 
