@@ -8,6 +8,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="deaf-signal" />
   <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="32x32" href="./icons/icon-192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="./icons/icon-512.png" />
   <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
   <title>deaf-signal — demonstracija</title>
   <style>
@@ -68,28 +70,9 @@
       width: 28px;
       height: 28px;
       border-radius: 4px;
-      background:
-        linear-gradient(135deg, rgba(94, 200, 255, 0.95), rgba(99, 102, 241, 0.85));
-      box-shadow:
-        0 0 0 1px rgba(255, 255, 255, 0.18) inset,
-        0 8px 22px rgba(56, 132, 255, 0.35);
-      position: relative;
       flex-shrink: 0;
-    }
-
-    /* Minimal signal bars (no chevron) */
-    .brand-mark::before {
-      content: "";
-      position: absolute;
-      left: 7px;
-      bottom: 7px;
-      width: 3px;
-      height: 6px;
-      border-radius: 1px;
-      background: rgba(7, 11, 18, 0.65);
-      box-shadow:
-        5px -3px 0 0 rgba(7, 11, 18, 0.65),
-        10px -7px 0 0 rgba(7, 11, 18, 0.65);
+      display: block;
+      object-fit: cover;
     }
 
     .brand-word {
@@ -372,7 +355,7 @@
 <body>
   <main>
     <div class="brand" aria-hidden="true">
-      <span class="brand-mark"></span>
+      <img class="brand-mark" src="./icons/icon-192.png" alt="" width="28" height="28" />
       <span class="brand-word">deaf-signal</span>
       <span class="brand-badge" data-i18n="badge">a11y</span>
     </div>
