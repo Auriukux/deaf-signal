@@ -2,7 +2,9 @@
  * Optional microphone loud-sound detection (Web Audio only — no ML / cloud).
  * High RMS threshold by design: quiet rooms and soft speech should NOT fire.
  * RMS loudness ≠ siren / door / horn classification — peaks only, not event type.
- * Active sessions auto-stop on pagehide / visibility hidden / beforeunload to avoid mic leaks.
+ * Active sessions auto-stop on pagehide / beforeunload (and explicit stop()).
+ * Visibility hidden does NOT stop by default (keeps listening in background tabs);
+ * pass `stopOnHidden: true` to opt into the old auto-stop-on-hidden behavior.
  * @module deaf-signal/listen
  */
 
@@ -50,6 +52,8 @@ let pendingStream = null;
  * @property {"urgent"|false|string} [alert] Auto `runAlert` name; default `"urgent"` (loudPeak / neutral). Product names (siren/door/…) remapped to urgent; unknown → skip (`null`). `false` = callback-only
  * @property {boolean} [notify] If true and Notification already granted, also `notifyAlert` (in addition to runAlert’s own notify path when alert runs)
  * @property {object} [alertOpts] Extra opts forwarded to `runAlert`
+ * @property {boolean} [stopOnHidden] If true, also stop when `visibilitychange` → hidden (old behavior). Default false — keep listening while the tab is backgrounded.
+ * @property {() => void} [onStop] Called once when the session stops (explicit stop, pagehide/beforeunload, or stopOnHidden)
  */
 
 /**
@@ -163,8 +167,10 @@ function computeRms(analyser, buffer) {
  * A second call aborts any in-flight first start (generation token + stop
  * pending tracks) before opening a new session.
  *
- * Registers `pagehide`, `beforeunload`, and `visibilitychange` (hidden) handlers
- * that call `stop()` so the mic track is released when the page is hidden or unloaded.
+ * Registers `pagehide` and `beforeunload` handlers that call `stop()` so the mic
+ * track is released on page unload. Does **not** stop on `visibilitychange` → hidden
+ * unless `opts.stopOnHidden === true` (opt-in old behavior). Listening continues while
+ * the tab is backgrounded by default.
  *
  * Default `alert` is `"urgent"` (neutral loudPeak). Mic stays separate from product
  * alerts (`ALERT_SIREN` / door / horn) — those belong on product preset buttons /
@@ -265,12 +271,14 @@ export async function startLoudListen(opts = {}) {
   let timerId = null;
   let rafId = null;
 
+  const stopOnHidden = opts.stopOnHidden === true;
+
   function detachLifecycle() {
     if (typeof window !== "undefined") {
       window.removeEventListener("pagehide", onLifecycleStop);
       window.removeEventListener("beforeunload", onLifecycleStop);
     }
-    if (typeof document !== "undefined") {
+    if (stopOnHidden && typeof document !== "undefined") {
       document.removeEventListener("visibilitychange", onVisibilityStop);
     }
   }
@@ -315,6 +323,13 @@ export async function startLoudListen(opts = {}) {
     if (pendingStream === stream) pendingStream = null;
     if (activeController === controller) {
       activeController = null;
+    }
+    if (typeof opts.onStop === "function") {
+      try {
+        opts.onStop();
+      } catch (_) {
+        /* user callback */
+      }
     }
   }
 
@@ -394,12 +409,13 @@ export async function startLoudListen(opts = {}) {
   pendingStream = null;
   activeController = controller;
 
-  // Stop mic when the page is hidden or unloaded (avoid leaking the track).
+  // Stop mic on page unload (avoid leaking the track). Hidden tabs keep listening
+  // unless stopOnHidden is opted in.
   if (typeof window !== "undefined") {
     window.addEventListener("pagehide", onLifecycleStop);
     window.addEventListener("beforeunload", onLifecycleStop);
   }
-  if (typeof document !== "undefined") {
+  if (stopOnHidden && typeof document !== "undefined") {
     document.addEventListener("visibilitychange", onVisibilityStop);
   }
 
