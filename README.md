@@ -80,7 +80,7 @@ The demo UI has an LT | EN language toggle (choice saved in `localStorage`); the
 
 `/` and `/demo` redirect to the demo page via `index.html` / `serve.json`.
 
-**PWA:** with `npm run demo` reachable on your phone (same Wi-Fi or a localhost tunnel), open the demo and use the browser / **Install app** prompt to add deaf-signal to the home screen.
+**PWA:** with `npm run demo` reachable on your phone (same Wi-Fi or a localhost tunnel), open the demo and use the browser / **Install app** prompt to add deaf-signal to the home screen. Installed PWAs are the realistic path for background Notification alerts when the tab is not focused.
 
 ## Usage
 
@@ -94,6 +94,8 @@ import {
   shakeElement,
   contrastFlashColor,
   isVibrateSupported,
+  requestNotifyPermission,
+  notifyAlert,
 } from "deaf-signal";
 
 // Auto contrast flash (white on dark backgrounds)
@@ -114,6 +116,17 @@ await alertCombo("Urgent alert!", { level: "urgent" });
 await flashScreen({ reduceMotion: true });
 await pulseBorder("#focus-target", { reduceMotion: true });
 await shakeElement("main", { reduceMotion: true });
+
+// Background-style alert (Notification permission + visual cues when tab is visible)
+await requestNotifyPermission();
+await notifyAlert("Incoming alert", {
+  body: "Check your messages",
+  level: "urgent",
+  tag: "deaf-signal",
+  flash: true,
+  shake: true,
+  combo: true,
+});
 ```
 
 ## API
@@ -128,6 +141,9 @@ await shakeElement("main", { reduceMotion: true });
 | `isVibrateSupported()` | `true` when Vibration API is present |
 | `alertCombo(message, opts?)` | Flash + banner + vibrate/shake; urgent flash is always red `#e53935` when `flashColor` omitted (other levels use auto contrast) |
 | `pulseBorder(target, opts?)` | Pulse element border; static outline when reduced motion |
+| `requestNotifyPermission()` | Request Notification permission (`granted` / `denied` / … / `unsupported`) |
+| `notifyAlert(title, opts?)` | System Notification when permitted; when the page is visible also flash / shake / combo |
+| `isNotificationSupported()` / `getNotifyPermission()` | Feature / permission helpers |
 
 `flashScreen`, `pulseBorder`, `shakeElement`, and `alertCombo` accept optional `reduceMotion: boolean`. When omitted, they follow the OS `prefers-reduced-motion: reduce` media query.
 
@@ -148,6 +164,13 @@ import { vibratePattern, PATTERN_MESSAGE, getPreset } from "deaf-signal";
 vibratePattern(PATTERN_MESSAGE);
 vibratePattern(getPreset("urgent"));
 ```
+
+
+### Background notifications
+
+`requestNotifyPermission()` + `notifyAlert(title, opts?)` use the browser **Notification** API (zero deps). When the document is hidden, the system notification (and notification `vibrate` where supported) is the main cue. When the tab is visible, `notifyAlert` also calls the existing flash / shake / combo helpers.
+
+Browsers only grant permission after a **user gesture**. True OS-level background delivery usually requires an **installed PWA** (and browser support) — a normal tab may pause or throttle when fully backgrounded. Missing Notification API → graceful no-ops for the notification part; visible visual cues still run.
 
 ## Why
 

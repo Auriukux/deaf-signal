@@ -20,3 +20,10 @@ export {
   PRESETS,
   getPreset,
 } from "./presets.js";
+
+export {
+  requestNotifyPermission,
+  notifyAlert,
+  isNotificationSupported,
+  getNotifyPermission,
+} from "./notify.js";

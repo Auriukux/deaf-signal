@@ -396,6 +396,8 @@
       <button type="button" id="btn-vibrate" class="secondary" data-i18n="btnVibrate"></button>
       <button type="button" id="btn-combo" class="urgent" data-i18n="btnCombo"></button>
       <button type="button" id="btn-pulse" class="secondary" data-i18n="btnPulse"></button>
+      <button type="button" id="btn-notify-perm" class="secondary" data-i18n="btnNotifyPerm"></button>
+      <button type="button" id="btn-notify-test" class="warn" data-i18n="btnNotifyTest"></button>
     </div>
 
     <button type="button" id="btn-install" data-i18n="btnInstall" hidden></button>
@@ -412,6 +414,10 @@
       vibratePattern,
       alertCombo,
       pulseBorder,
+      requestNotifyPermission,
+      notifyAlert,
+      getNotifyPermission,
+      isNotificationSupported,
     } from "../src/index.js";
 
     const LANG_KEY = "deaf-signal-demo-lang";
@@ -430,11 +436,20 @@
         btnPulse: "Pulsuoti rėmelį",
         statusLabel: "Pastaba",
         hint:
-          "Vibracija arba vizualus drebėjimas — vibracija veikia daugelyje mobiliųjų Chrome / Android; darbalaukyje dažnai naudojamas vizualus drebėjimas. Atidarykite šį failą tiesiogiai arba per lokalų serverį. Importas: <code>../src/index.js</code>",
+          "Vibracija arba vizualus drebėjimas — vibracija veikia daugelyje mobiliųjų Chrome / Android; darbalaukyje dažnai naudojamas vizualus drebėjimas. Foniniams pranešimams reikia Notification leidimo; tikras OS fonas dažnai reikalauja įdiegtos PWA. Importas: <code>../src/index.js</code>",
         banner: "⚠️ Dėmesio: svarbus pranešimas.",
         combo: "Skubus įspėjimas — patikrinkite pranešimą!",
         vibrateFail: "Vibracija ir drebėjimas nepalaikomi šiame kontekste.",
         langGroup: "Kalba",
+        btnNotifyPerm: "Leisti pranešimus",
+        btnNotifyTest: "Foninis testas (perjunkite skirtuką)",
+        notifyGranted: "Pranešimų leidimas suteiktas.",
+        notifyDenied: "Pranešimai atmesti arba nepalaikomi.",
+        notifyDefault: "Leidimas dar nesuteiktas — spauskite „Leisti pranešimus“.",
+        notifyUnsupported: "Notification API šiame naršyklėje nepalaikomas.",
+        notifyTitle: "deaf-signal",
+        notifyBody: "Foninis įspėjimas — perjunkite skirtuką ir patikrinkite.",
+        notifySent: "Po ~2.5 s — įspėjimas. Perjunkite skirtuką, kad pamatytumėte foninį pranešimą.",
         btnInstall: "Įdiegti programėlę",
       },
       en: {
@@ -450,11 +465,20 @@
         btnPulse: "Pulse border",
         statusLabel: "Hint",
         hint:
-          "Vibration or visual shake — vibration works on many mobile Chrome / Android devices; desktop often uses visual shake. Open this file directly or via a local server. Import: <code>../src/index.js</code>",
+          "Vibration or visual shake — vibration works on many mobile Chrome / Android devices; desktop often uses visual shake. Background alerts need Notification permission; true OS background usually needs an installed PWA. Import: <code>../src/index.js</code>",
         banner: "⚠️ Attention: important notice.",
         combo: "Urgent alert — check the message!",
         vibrateFail: "Vibration and shake are not supported in this context.",
         langGroup: "Language",
+        btnNotifyPerm: "Allow notifications",
+        btnNotifyTest: "Background test (switch tab)",
+        notifyGranted: "Notification permission granted.",
+        notifyDenied: "Notifications denied or unsupported.",
+        notifyDefault: "Permission not granted yet — tap “Allow notifications”.",
+        notifyUnsupported: "Notification API is not supported in this browser.",
+        notifyTitle: "deaf-signal",
+        notifyBody: "Background alert — switch tabs to verify.",
+        notifySent: "Alert in ~2.5s — switch tabs to see the background notification.",
         btnInstall: "Install app",
       },
     };
@@ -520,6 +544,49 @@
     document.getElementById("btn-pulse").addEventListener("click", () => {
       const card = document.querySelector(".card");
       pulseBorder(card, { color: "#5ec8ff", times: 3, durationMs: 1000 });
+    });
+
+    document.getElementById("btn-notify-perm").addEventListener("click", async () => {
+      if (!isNotificationSupported()) {
+        showBanner(strings[lang].notifyUnsupported, { level: "warn", durationMs: 4000 });
+        return;
+      }
+      const perm = await requestNotifyPermission();
+      const t = strings[lang];
+      let msg = t.notifyDefault;
+      let level = "info";
+      if (perm === "granted") {
+        msg = t.notifyGranted;
+        level = "info";
+      } else if (perm === "denied" || perm === "unsupported") {
+        msg = perm === "unsupported" ? t.notifyUnsupported : t.notifyDenied;
+        level = "warn";
+      }
+      showBanner(msg, { level, durationMs: 4000 });
+    });
+
+    document.getElementById("btn-notify-test").addEventListener("click", async () => {
+      const t = strings[lang];
+      if (!isNotificationSupported()) {
+        showBanner(t.notifyUnsupported, { level: "warn", durationMs: 3500 });
+      } else if (getNotifyPermission() === "denied") {
+        showBanner(t.notifyDenied, { level: "warn", durationMs: 3500 });
+      } else if (getNotifyPermission() === "default") {
+        showBanner(t.notifyDefault, { level: "info", durationMs: 3500 });
+      } else {
+        showBanner(t.notifySent, { level: "info", durationMs: 2500 });
+      }
+      // Short delay so the user can switch tabs to exercise the background Notification path.
+      await new Promise((r) => setTimeout(r, 2500));
+      await notifyAlert(t.notifyTitle, {
+        body: t.notifyBody,
+        level: "urgent",
+        tag: "deaf-signal-demo",
+        flash: true,
+        shake: true,
+        combo: true,
+        shakeTarget: document.querySelector(".card"),
+      });
     });
 
     // PWA: service worker + optional install prompt
