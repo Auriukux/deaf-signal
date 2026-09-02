@@ -38,10 +38,14 @@ import {
   shakeElement,
   contrastFlashColor,
   isVibrateSupported,
+  requestNotifyPermission,
+  notifyAlert,
 } from "deaf-signal";
 ```
 
 Presets (`PATTERN_*`, `PRESETS`, `getPreset`) are optional via `"deaf-signal/presets"` or the same package root.
+
+Notification helpers (`requestNotifyPermission`, `notifyAlert`, …) live in `src/notify.js` and are re-exported from the package root (`"deaf-signal/notify"` also works). Request permission from a **user gesture**. True OS background alerts typically need an **installed PWA** / browser support — do not assume a backgrounded tab will always deliver notifications.
 
 Or load `../src/index.js` from the demo page as shown in `examples/demo.html`.
 
