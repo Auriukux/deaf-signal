@@ -222,7 +222,7 @@ export function flashScreen(opts = {}) {
  * @param {object} [opts]
  * @param {"info"|"warn"|"urgent"} [opts.level="info"] Visual severity
  * @param {number} [opts.durationMs=3000] Auto-dismiss delay (0 = stay until closed)
- * @returns {Promise<HTMLElement>} The banner element
+ * @returns {Promise<HTMLElement|null>} The banner element (null without document)
  */
 export function showBanner(message, opts = {}) {
   const { level = "info", durationMs = DEFAULT_BANNER_MS } = opts;
