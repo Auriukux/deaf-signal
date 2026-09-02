@@ -5,22 +5,80 @@ A tiny ESM library for deaf / hard-of-hearing accessibility on the web.
 
 Flash the screen, show a high-contrast banner, vibrate when supported, or combine them — without relying on audio.
 
-## Install
+Not sure which folder you should be in? This README is a map. Follow the numbered steps and you will always know the path.
 
-### Use as dependency
+## Install + Demo
+
+Pick **one** path: clone the repo to try the demo, or install the package into another project.
+
+### A) Clone / develop (recommended for trying the demo)
+
+1. Open a terminal in a folder you choose (for example Desktop).
+2. Clone the repo — this creates a folder named `deaf-signal`:
+
+```bash
+git clone https://github.com/Auriukux/deaf-signal.git
+```
+
+3. Enter the project root (you should see `package.json`, `examples/`, and `src/`):
+
+```bash
+cd deaf-signal
+```
+
+4. Start the static demo server:
+
+```bash
+npm run demo
+```
+
+5. In your browser, open **http://localhost:3000** (or `/demo`). You should see the demo page with **LT | EN** language buttons.
+6. Stop the server with **Ctrl+C** in the same terminal.
+
+You can also copy `src/` into your project and import the modules directly.
+
+ESM imports may be blocked from `file://`, so prefer this local server over opening `examples/demo.html` directly.
+
+### B) Install as a dependency into another project
+
+1. `cd` into **your** project folder (the one that already has your own `package.json`).
+2. Install from GitHub (there is no npm registry package yet):
 
 ```bash
 npm i github:Auriukux/deaf-signal
 ```
 
-### Clone / develop
+This puts the package in `node_modules/deaf-signal`.
+
+3. Run the demo **from inside that package** — not from your project root. Avoid broken PowerShell `&&` by using one of these:
+
+Cross-platform (any shell):
 
 ```bash
-git clone https://github.com/Auriukux/deaf-signal.git
-cd deaf-signal
+npm run demo --prefix node_modules/deaf-signal
 ```
 
-You can also copy `src/` into your project and import the modules directly.
+PowerShell:
+
+```powershell
+cd node_modules\deaf-signal; npm run demo
+```
+
+Or two separate lines (any shell):
+
+```bash
+cd node_modules/deaf-signal
+npm run demo
+```
+
+4. Browser: open **http://localhost:3000** (same as above).
+5. In your code, import from `deaf-signal` as shown in **Usage** below.
+
+**Note:** `npm run demo` in the **parent** folder fails with **Missing script** — the demo script lives inside the package, not on your project's `package.json`.
+
+The demo UI has an LT | EN language toggle (choice saved in `localStorage`); the library API is English. With **Reduce motion** enabled, flash and pulse animations are skipped or softened automatically. Desktop browsers often expose Vibration API that does nothing — with `shakeFallback` (default on), visual shake always runs so the cue is visible.
+
+`/` and `/demo` redirect to the demo page via `index.html` / `serve.json`.
 
 ## Usage
 
@@ -89,55 +147,6 @@ vibratePattern(PATTERN_MESSAGE);
 vibratePattern(getPreset("urgent"));
 ```
 
-## Demo
-
-The demo script lives **inside the package**, so how you run it depends on how you installed:
-
-### Use as dependency
-
-After `npm i github:Auriukux/deaf-signal` in a parent project:
-
-Cross-platform (recommended — works in PowerShell, cmd.exe, and bash):
-
-```bash
-npm run demo --prefix node_modules/deaf-signal
-```
-
-PowerShell alternative:
-
-```powershell
-cd node_modules\deaf-signal; npm run demo
-```
-
-Or two lines:
-
-```powershell
-cd node_modules\deaf-signal
-npm run demo
-```
-
-cmd.exe / bash alternative:
-
-```bat
-cd node_modules\deaf-signal && npm run demo
-```
-
-(`npm run demo` from the parent folder fails with **Missing script** — the script is not on the parent `package.json`. PowerShell also rejects `&&` in older versions, so prefer `--prefix` or `;`.)
-
-### Clone / develop
-
-From the repo root:
-
-```bash
-npm run demo
-```
-
-Then open **http://localhost:3000** (or `/demo`). ESM imports may be blocked from `file://`, so prefer this local server over opening `examples/demo.html` directly.
-
-The demo UI has an LT | EN language toggle (choice saved in `localStorage`); the library API is English. With **Reduce motion** enabled, flash and pulse animations are skipped or softened automatically. Desktop browsers often expose Vibration API that does nothing — with `shakeFallback` (default on), visual shake always runs so the cue is visible.
-
-`/` and `/demo` redirect to the demo page via `index.html` / `serve.json`.
-
 ## Why
 
 Many web apps still signal only with sound. This package makes it easy to add **sight + touch** cues so alerts are usable without hearing.
@@ -152,6 +161,28 @@ MIT © Auriukux
 
 `deaf-signal` — maža ESM biblioteka **vizualiems ir haptic (vibracijos / drebėjimo) įspėjimams**.
 Tinka prieinamumui kurtiesiems / neprigirdintiems.
+Nežinote, kuriame aplanke esate? Šis README — žemėlapis. Eikite pagal numerius.
 
-Demo: priklausomybė — `npm run demo --prefix node_modules/deaf-signal` (cross-platform; PowerShell: `cd node_modules\deaf-signal; npm run demo`); klonuojant — `npm run demo` → `http://localhost:3000` (arba `/demo`). Viršuje — **LT | EN** perjungimas.
+### A) Klonuoti / bandyti demo
+
+1. Atidarykite terminalą pasirinktame aplanke (pvz. Desktop).
+2. `git clone https://github.com/Auriukux/deaf-signal.git` → sukuria aplanką `deaf-signal`.
+3. `cd deaf-signal` → dabar esate projekto šaknyje (`package.json`, `examples/`, `src/`).
+4. `npm run demo` → paleidžia serverį.
+5. Naršyklėje: **http://localhost:3000** (arba `/demo`) → demo su **LT | EN**.
+6. Stabdyti: **Ctrl+C** tame pačiame terminale.
+
+### B) Įdiegti kaip priklausomybę į kitą projektą
+
+1. `cd` į **savo** projekto aplanką (su jūsų `package.json`).
+2. `npm i github:Auriukux/deaf-signal` → įdiegia į `node_modules/deaf-signal`.
+3. Paleiskite demo **iš paketo vidaus** (ne iš tėvinio aplanko). Venkite PowerShell `&&`:
+   - Bet kuriame shell: `npm run demo --prefix node_modules/deaf-signal`
+   - PowerShell: `cd node_modules\deaf-signal; npm run demo`
+   - Arba dvi eilutės: `cd` tada `npm run demo`
+4. Naršyklė: **http://localhost:3000**.
+5. Kode importuokite iš `deaf-signal` (žr. **Usage**).
+
+**Pastaba:** tėviniame aplanke `npm run demo` duoda **Missing script** — demo skriptas yra tik pakete.
+
 Skubus (urgent) flash — raudonas; jei vibracija neveikia (pvz. desktop), veikia vizualus drebėjimas.
