@@ -80,6 +80,31 @@ function urgencyFromLevel(level) {
   return "normal";
 }
 
+
+/**
+ * Resolve Notification icon URL.
+ * - `icon: false` → omit icon
+ * - string → use as-is
+ * - omitted → `./icons/icon-192.png` relative to the current page (demo / Pages)
+ * Library consumers on other origins should pass `icon` explicitly.
+ * @param {string|false|undefined|null} icon
+ * @returns {string|undefined}
+ */
+export function resolveNotifyIcon(icon) {
+  if (icon === false) return undefined;
+  if (icon != null && icon !== "") return String(icon);
+  const base =
+    (typeof document !== "undefined" && document.baseURI) ||
+    (typeof location !== "undefined" && location.href) ||
+    "";
+  if (!base) return undefined;
+  try {
+    return new URL("./icons/icon-192.png", base).href;
+  } catch {
+    return "./icons/icon-192.png";
+  }
+}
+
 /**
  * Show a system Notification when permitted.
  * @param {string} title
@@ -101,11 +126,13 @@ function showSystemNotification(title, opts) {
     silent,
   } = opts;
 
+  const resolvedIcon = resolveNotifyIcon(icon);
+
   /** @type {NotificationOptions} */
   const nOpts = {
     body: body || undefined,
     tag: tag || undefined,
-    icon: icon || undefined,
+    icon: resolvedIcon,
     requireInteraction:
       requireInteraction != null
         ? !!requireInteraction
@@ -137,7 +164,7 @@ function showSystemNotification(title, opts) {
       return new Notification(String(title || "Alert"), {
         body: body || undefined,
         tag: tag || undefined,
-        icon: icon || undefined,
+        icon: resolvedIcon,
       });
     } catch {
       return null;
@@ -207,8 +234,6 @@ async function runVisibleCues(title, opts) {
     });
   } else if (vibrate != null) {
     vibratePattern(pattern, { shakeFallback: false });
-  } else if (flash && !shake) {
-    // flash-only already queued
   }
 
   await Promise.all(tasks);
@@ -230,7 +255,7 @@ async function runVisibleCues(title, opts) {
  * @param {"info"|"warn"|"urgent"|string} [opts.level="info"] Severity (also drives defaults)
  * @param {"low"|"normal"|"high"|"critical"|string} [opts.urgency] Notification urgency override
  * @param {string} [opts.tag] Notification tag (replaces prior with same tag)
- * @param {string} [opts.icon] Notification icon URL
+ * @param {string|false} [opts.icon] Notification icon URL; omit for `./icons/icon-192.png` relative to page; `false` to skip
  * @param {number|number[]} [opts.vibrate] Pattern for notification + in-page vibrate
  * @param {boolean} [opts.flash=true] When visible: flash the screen
  * @param {boolean} [opts.shake=true] When visible: shake / vibrate

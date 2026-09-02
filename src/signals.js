@@ -177,24 +177,14 @@ export function isVibrateSupported() {
   );
 }
 
-/**
- * Briefly flash the viewport with a solid overlay color.
- * When `opts.color` is omitted, picks a contrast color from the page background
- * (dark → white, light → near-black) via {@link contrastFlashColor}.
- * Honors `prefers-reduced-motion` (or `opts.reduceMotion`) by skipping the flash.
- * @param {object} [opts]
- * @param {string} [opts.color] Overlay background color (auto contrast when omitted)
- * @param {number} [opts.durationMs=400] How long the flash stays visible
- * @param {number} [opts.opacity=0.55] Overlay opacity 0–1
- * @param {boolean} [opts.reduceMotion] Force skip/respect reduced motion (default: OS preference)
- * @returns {Promise<void>}
- */
 /** @type {HTMLElement|null} */
 let sharedFlashOverlay = null;
 /** @type {number|null} */
 let sharedFlashHideTimer = null;
 /** @type {number|null} */
 let sharedFlashRemoveTimer = null;
+/** @type {(() => void)|null} Resolve for the in-flight flashScreen Promise */
+let sharedFlashResolve = null;
 
 function clearSharedFlashTimers() {
   if (sharedFlashHideTimer != null) {
@@ -205,6 +195,17 @@ function clearSharedFlashTimers() {
     clearTimeout(sharedFlashRemoveTimer);
     sharedFlashRemoveTimer = null;
   }
+}
+
+/**
+ * Immediately resolve any pending flashScreen Promise, then clear its timers.
+ * A second flash used to only clear timers — the first `await` hung forever.
+ * @param {(() => void)|null} previousResolve
+ * @returns {null} always clears the stored resolve
+ */
+export function settleFlashResolve(previousResolve) {
+  if (typeof previousResolve === "function") previousResolve();
+  return null;
 }
 
 /**
@@ -230,6 +231,18 @@ function ensureSharedFlashOverlay() {
   return el;
 }
 
+/**
+ * Briefly flash the viewport with a solid overlay color.
+ * Overlapping calls reuse one overlay: the previous Promise is resolved
+ * immediately so `await flashScreen()` never hangs.
+ * When `color` is omitted, picks contrast via {@link contrastFlashColor}.
+ * @param {object} [opts]
+ * @param {string} [opts.color]
+ * @param {number} [opts.durationMs]
+ * @param {number} [opts.opacity]
+ * @param {boolean} [opts.reduceMotion]
+ * @returns {Promise<void>}
+ */
 export function flashScreen(opts = {}) {
   const {
     durationMs = DEFAULT_FLASH_MS,
@@ -250,12 +263,18 @@ export function flashScreen(opts = {}) {
       resolve();
       return;
     }
+
+    // Settle any in-flight flash before clearing timers / reusing overlay
+    sharedFlashResolve = settleFlashResolve(sharedFlashResolve);
     clearSharedFlashTimers();
+
     const el = ensureSharedFlashOverlay();
     if (!el) {
       resolve();
       return;
     }
+
+    sharedFlashResolve = resolve;
     el.style.background = color;
     el.style.opacity = String(opacity);
     el.style.transition = "opacity 120ms ease-out";
@@ -266,7 +285,10 @@ export function flashScreen(opts = {}) {
           el.remove();
           sharedFlashOverlay = null;
         }
-        resolve();
+        if (sharedFlashResolve === resolve) {
+          sharedFlashResolve = null;
+          resolve();
+        }
       }, 140);
     }, durationMs);
   });
@@ -280,11 +302,28 @@ export function flashScreen(opts = {}) {
  * @param {number} [opts.durationMs=3000] Auto-dismiss delay (0 = stay until closed)
  * @returns {Promise<HTMLElement|null>} The banner element (null without document)
  */
+/**
+ * Default banner close aria-label from `<html lang>` (`lt*` → "Uždaryti", else "Close").
+ * Demo / callers can still pass `closeLabel` to override.
+ * @returns {string}
+ */
+export function defaultBannerCloseLabel() {
+  if (typeof document !== "undefined") {
+    try {
+      const lang = String(document.documentElement?.lang || "").toLowerCase();
+      if (lang.startsWith("lt")) return "Uždaryti";
+    } catch {
+      /* ignore */
+    }
+  }
+  return "Close";
+}
+
 export function showBanner(message, opts = {}) {
   const {
     level = "info",
     durationMs = DEFAULT_BANNER_MS,
-    closeLabel = "Close",
+    closeLabel = defaultBannerCloseLabel(),
   } = opts;
 
   const palette = {
@@ -327,7 +366,7 @@ export function showBanner(message, opts = {}) {
 
     const close = document.createElement("button");
     close.type = "button";
-    close.setAttribute("aria-label", String(closeLabel || "Close"));
+    close.setAttribute("aria-label", String(closeLabel || defaultBannerCloseLabel()));
     close.textContent = "×";
     Object.assign(close.style, {
       position: "absolute",
