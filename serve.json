@@ -1,6 +1,7 @@
 {
   "redirects": [
-    { "source": "/demo", "destination": "/examples/demo.html" },
-    { "source": "/demo/", "destination": "/examples/demo.html" }
+    { "source": "/", "destination": "/examples/demo.html", "type": 302 },
+    { "source": "/demo", "destination": "/examples/demo.html", "type": 302 },
+    { "source": "/demo/", "destination": "/examples/demo.html", "type": 302 }
   ]
 }
