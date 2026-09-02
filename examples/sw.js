@@ -1,5 +1,5 @@
 /* deaf-signal demo — minimal PWA service worker (installability / offline shell) */
-const CACHE = "deaf-signal-demo-v4";
+const CACHE = "deaf-signal-demo-v5";
 const examplesBase = new URL("./", self.location.href);
 /** Cache-first shell only (HTML / manifest / icons) — not live library modules */
 const SHELL_URLS = [
@@ -42,10 +42,18 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
-  // Network-first for library modules under /src/
+  // Network-first for library modules under /src/ (put on ok so offline match works)
   if (isSrcModule(url)) {
     event.respondWith(
-      fetch(request).catch(() => caches.match(request))
+      fetch(request)
+        .then((response) => {
+          if (response && response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE).then((cache) => cache.put(request, copy));
+          }
+          return response;
+        })
+        .catch(() => caches.match(request))
     );
     return;
   }

@@ -18,9 +18,6 @@ export {
   FLASH_RATE_MAX,
   FLASH_RATE_WINDOW_MS,
   FLASH_MIN_GAP_MS,
-  resetFlashRateLimit,
-  canStartFlash,
-  noteFlashStart,
 } from "./signals.js";
 export type {
   AlertLevel,

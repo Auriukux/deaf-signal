@@ -149,7 +149,7 @@ export function getAlert(name) {
 export async function runAlert(name, opts = {}) {
   const preset = getAlert(name);
   if (!preset) {
-    const label = name == null ? String(name) : String(name);
+    const label = String(name);
     if (typeof console !== "undefined" && typeof console.warn === "function") {
       console.warn(
         `[deaf-signal] runAlert: unknown alert name "${label}" — no-op (fail-closed).`

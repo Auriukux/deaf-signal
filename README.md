@@ -190,7 +190,7 @@ vibratePattern(getPreset("urgent"));
 
 ### Product alert presets
 
-Named **presentation** presets live in `src/alerts.js` (also re-exported from the package root). They bundle banner copy, severity, flash color, vibrate pattern, and shake options for common event **cues you trigger** — **not** a sound classifier (no microphone, no ML). **Bold:** presets are cues, not detectors.
+Named **presentation** presets live in `src/alerts.js` (also re-exported from the package root). They bundle banner copy, severity, flash color, vibrate pattern, and shake options for common event **cues you trigger** — **not** a sound classifier (no microphone, no ML). Treat them as labeled patterns your app fires after *your* own detection or UI action; they never listen for or identify real-world sounds.
 
 | Export | Default EN message | Level | Typical use |
 | --- | --- | --- | --- |
@@ -205,8 +205,9 @@ Named **presentation** presets live in `src/alerts.js` (also re-exported from th
 ```js
 import { runAlert, getAlert, ALERT_DOOR } from "deaf-signal";
 
-await runAlert("door");
-console.log(getAlert("horn").vibratePattern);
+const r = await runAlert("door");
+if (r === false) return; // unknown name → false + console.warn (fail-closed)
+console.log(r.alert.name, getAlert("horn").vibratePattern);
 await runAlert("call", { message: ALERT_DOOR.message }); // override freely
 ```
 
@@ -221,7 +222,7 @@ Browsers only grant permission after a **user gesture**. True OS-level backgroun
 
 ### Optional mic loud listen
 
-`startLoudListen(opts?)` is an **optional** helper, kept **separate from product alerts** (`ALERT_SIREN` / door / horn / call). It asks for microphone permission, measures RMS via Web Audio (`AnalyserNode`, fftSize 2048), and fires only on **strong loudness peaks / loudPeak** (default threshold **0.25** RMS, cooldown `minIntervalMs` 2500). It is **not** a sound classifier — no ML, no cloud — **RMS ≠ siren / door / horn**. Quiet rooms / soft speech should not trip. On exceed: `onLoud({ level, rms })` and/or a **neutral** auto `runAlert("urgent")` (default); pass `alert: false` for callback-only. Passing product event names (`siren`, `door`, …) **or any unknown name** is remapped to `"urgent"` (fail-closed) — use the product preset buttons / `runAlert("siren")` for those cues. A second `startLoudListen` aborts any in-flight first start. Always call `stopLoudListen()` / `controller.stop()` to release the mic. Requires a secure context (HTTPS / localhost).
+`startLoudListen(opts?)` is an **optional** helper, kept **separate from product alerts** (`ALERT_SIREN` / door / horn / call). It asks for microphone permission, measures RMS via Web Audio (`AnalyserNode`, fftSize 2048), and fires only on **strong loudness peaks / loudPeak** (default threshold **0.25** RMS, cooldown `minIntervalMs` 2500). It is **not** a sound classifier — no ML, no cloud — **RMS ≠ siren / door / horn**. Quiet rooms / soft speech should not trip. On exceed: `onLoud({ level, rms })` and/or a **neutral** auto `runAlert("urgent")` (default); pass `alert: false` for callback-only. Product event names (`siren`, `door`, …) are remapped to `"urgent"`; **unknown** names skip the auto-alert entirely (no urgent fire) — use the product preset buttons / `runAlert("siren")` for those cues. A second `startLoudListen` aborts any in-flight first start. Always call `stopLoudListen()` / `controller.stop()` to release the mic. Requires a secure context (HTTPS / localhost).
 
 ```js
 import { startLoudListen, stopLoudListen, DEFAULT_LOUD_THRESHOLD } from "deaf-signal";

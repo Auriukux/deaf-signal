@@ -32,8 +32,8 @@ export interface StartLoudListenOptions {
   onLevel?: (level: number) => void;
   /**
    * Auto `runAlert` name for a **loudPeak** cue; default `"urgent"` (neutral).
-   * Product event names (`siren` / `door` / `horn` / …) and unknown names are remapped
-   * to `"urgent"` (fail-closed) — mic RMS is not a classifier.
+   * Product event names (`siren` / `door` / `horn` / …) remap to `"urgent"`;
+   * unknown names skip the alert (`null`) — mic RMS is not a classifier.
    * Pass `false` for callback-only (`onLoud` / `notify`).
    */
   alert?: "urgent" | false | string;
@@ -54,7 +54,7 @@ export interface LoudListenController {
   active: boolean;
 }
 
-/** Resolve loudPeak alert name (`false` → null; default / product / unknown → `"urgent"` fail-closed). */
+/** Resolve loudPeak alert name (`false` / unknown → null; default / product → `"urgent"`). */
 export function resolveLoudAlertName(
   alert?: StartLoudListenOptions["alert"] | null
 ): string | null;

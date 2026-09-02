@@ -46,7 +46,7 @@ let pendingStream = null;
  * @property {number} [minIntervalMs] Cooldown between fires; default 2500
  * @property {(ev: LoudEvent) => void} [onLoud] Called when threshold is exceeded
  * @property {(level: number) => void} [onLevel] Optional live meter callback (~50–100ms)
- * @property {"urgent"|false|string} [alert] Auto `runAlert` name; default `"urgent"` (loudPeak / neutral). Product names (siren/door/…) remapped to urgent. `false` = callback-only
+ * @property {"urgent"|false|string} [alert] Auto `runAlert` name; default `"urgent"` (loudPeak / neutral). Product names (siren/door/…) remapped to urgent; unknown → skip (`null`). `false` = callback-only
  * @property {boolean} [notify] If true and Notification already granted, also `notifyAlert` (in addition to runAlert’s own notify path when alert runs)
  * @property {object} [alertOpts] Extra opts forwarded to `runAlert`
  */
@@ -73,10 +73,11 @@ const PRODUCT_EVENT_ALERT_NAMES = new Set([
 /**
  * Resolve auto-alert name for {@link startLoudListen}.
  * Default is `"urgent"` (neutral loudPeak cue). Pass `false` for callback-only.
- * Product event names (`siren` / `door` / `horn` / …) and **unknown** names are
- * remapped to `"urgent"` (fail-closed). RMS loudness is not a classifier.
+ * Product event names (`siren` / `door` / `horn` / …) are remapped to `"urgent"`
+ * (mic must not claim classifier cues). **Unknown** names return `null` so no
+ * combo fires (true fail-closed). RMS loudness is not a classifier.
  * @param {"urgent"|false|string|undefined|null} alert
- * @returns {string|null} Alert name, or `null` when alerts are disabled
+ * @returns {string|null} Alert name, or `null` when alerts are skipped
  */
 export function resolveLoudAlertName(alert) {
   if (alert === false) return null;
@@ -84,12 +85,12 @@ export function resolveLoudAlertName(alert) {
   const name = String(alert).toLowerCase();
   // Known neutral cue
   if (name === DEFAULT_LOUD_ALERT) return DEFAULT_LOUD_ALERT;
-  // Product classifier names AND any unknown string → fail-closed to urgent
-  // (mic RMS is loudPeak only — never invent / silently wire a custom preset)
+  // Product classifier names → remap to urgent (mic is loudPeak only)
   if (PRODUCT_EVENT_ALERT_NAMES.has(name)) {
     return DEFAULT_LOUD_ALERT;
   }
-  return DEFAULT_LOUD_ALERT;
+  // Unknown string → skip alert entirely (do not invent / fire urgent)
+  return null;
 }
 
 /**

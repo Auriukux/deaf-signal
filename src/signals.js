@@ -231,17 +231,19 @@ export function resetFlashRateLimit() {
 
 /**
  * Whether a new full flash may start now without exceeding the rate limit.
+ * Pure query — does not mutate the rate-limit window (use {@link noteFlashStart}
+ * only when a flash actually begins).
  * @param {number} [now=Date.now()]
  * @returns {boolean}
  */
 export function canStartFlash(now = Date.now()) {
   const t = Number(now);
   const at = Number.isFinite(t) ? t : Date.now();
-  flashStartTimestamps = flashStartTimestamps.filter(
+  const recent = flashStartTimestamps.filter(
     (ts) => at - ts < FLASH_RATE_WINDOW_MS
   );
-  if (flashStartTimestamps.length >= FLASH_RATE_MAX) return false;
-  const last = flashStartTimestamps[flashStartTimestamps.length - 1];
+  if (recent.length >= FLASH_RATE_MAX) return false;
+  const last = recent[recent.length - 1];
   if (last != null && at - last < FLASH_MIN_GAP_MS) return false;
   return true;
 }
