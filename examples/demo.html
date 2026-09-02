@@ -78,12 +78,13 @@
     <div class="card">
       <button type="button" id="btn-flash">Mirksėti ekraną (flash)</button>
       <button type="button" id="btn-banner" class="warn">Rodyti juostą (banner)</button>
-      <button type="button" id="btn-vibrate">Vibruoti (jei palaikoma)</button>
+      <button type="button" id="btn-vibrate">Vibruoti / drebėjimas (fallback)</button>
       <button type="button" id="btn-combo" class="urgent">Kombinuotas įspėjimas</button>
       <button type="button" id="btn-pulse">Pulsuoti rėmelį (pulseBorder)</button>
     </div>
     <p class="hint">
-      Vibracija veikia daugelyje mobiliųjų Chrome / Android.
+      Vibracija arba vizualus drebėjimas — vibracija veikia daugelyje mobiliųjų
+      Chrome / Android; darbalaukyje dažnai naudojamas vizualus drebėjimas.
       Atidarykite šį failą tiesiogiai arba per lokalų serverį.
       Importas: <code>../src/index.js</code>
     </p>
@@ -98,7 +99,7 @@
     } from "../src/index.js";
 
     document.getElementById("btn-flash").addEventListener("click", () => {
-      flashScreen({ color: "#ffeb3b", durationMs: 350 });
+      flashScreen({ durationMs: 350 });
     });
 
     document.getElementById("btn-banner").addEventListener("click", () => {
@@ -109,9 +110,11 @@
     });
 
     document.getElementById("btn-vibrate").addEventListener("click", () => {
-      const ok = vibratePattern([120, 60, 120, 60, 240]);
+      const ok = vibratePattern([120, 60, 120, 60, 240], {
+        shakeFallback: true,
+      });
       if (!ok) {
-        showBanner("Vibracija nepalaikoma šiame įrenginyje / naršyklėje.", {
+        showBanner("Vibracija ir drebėjimas nepalaikomi šiame kontekste.", {
           level: "info",
           durationMs: 3500,
         });
