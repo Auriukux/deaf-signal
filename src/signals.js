@@ -5,7 +5,7 @@
 
 const DEFAULT_FLASH_MS = 400;
 const DEFAULT_BANNER_MS = 3000;
-const DEFAULT_SHAKE_MS = 450;
+const DEFAULT_SHAKE_MS = 550;
 
 /**
  * Whether the user (or caller) prefers reduced motion.
@@ -294,21 +294,47 @@ export function showBanner(message, opts = {}) {
   });
 }
 
+const SHAKE_STYLE_ID = "deaf-signal-shake-style";
+
 /**
- * Visual shake (drebėjimas) via CSS transform — fallback when Vibration API is missing.
- * Honors `prefers-reduced-motion` / `opts.reduceMotion` with a brief opacity pulse
- * (or no heavy shake). Restores inline styles afterward.
+ * Ensure the shared CSS @keyframes for visual shake are present once.
+ */
+function ensureShakeKeyframes() {
+  if (typeof document === "undefined") return;
+  if (document.getElementById(SHAKE_STYLE_ID)) return;
+  const style = document.createElement("style");
+  style.id = SHAKE_STYLE_ID;
+  style.textContent = `
+@keyframes deaf-signal-shake {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  12% { transform: translateX(calc(var(--deaf-shake-amp, 16px) * -1)) rotate(-1.2deg); }
+  24% { transform: translateX(var(--deaf-shake-amp, 16px)) rotate(1.2deg); }
+  36% { transform: translateX(calc(var(--deaf-shake-amp, 16px) * -0.85)) rotate(-0.9deg); }
+  48% { transform: translateX(calc(var(--deaf-shake-amp, 16px) * 0.85)) rotate(0.9deg); }
+  60% { transform: translateX(calc(var(--deaf-shake-amp, 16px) * -0.55)) rotate(-0.5deg); }
+  72% { transform: translateX(calc(var(--deaf-shake-amp, 16px) * 0.55)) rotate(0.5deg); }
+  84% { transform: translateX(calc(var(--deaf-shake-amp, 16px) * -0.25)) rotate(-0.2deg); }
+}
+`.trim();
+  document.head.appendChild(style);
+}
+
+/**
+ * Visual shake (drebėjimas) via CSS @keyframes / Web Animations.
+ * Much more visible than tiny step transforms — default amplitude ~16px with slight rotate.
+ * Honors `prefers-reduced-motion` / `opts.reduceMotion` with a brief opacity pulse only.
+ * Cleans up animation and inline styles afterward.
  * @param {Element|string} target Element or CSS selector
  * @param {object} [opts]
- * @param {number} [opts.durationMs=450] Total shake duration
- * @param {number} [opts.amplitudePx=8] Max horizontal offset in px
+ * @param {number} [opts.durationMs=550] Total shake duration (~500–600ms)
+ * @param {number} [opts.amplitudePx=16] Max horizontal offset in px (±14–18 recommended)
  * @param {boolean} [opts.reduceMotion] Force skip/respect reduced motion
  * @returns {Promise<boolean>} true if a visual cue ran
  */
 export function shakeElement(target, opts = {}) {
   const {
     durationMs = DEFAULT_SHAKE_MS,
-    amplitudePx = 8,
+    amplitudePx = 16,
     reduceMotion: reduceMotionOpt,
   } = opts;
 
@@ -327,16 +353,24 @@ export function shakeElement(target, opts = {}) {
     const prevTransition = el.style.transition;
     const prevOpacity = el.style.opacity;
     const prevWillChange = el.style.willChange;
+    const prevAnimation = el.style.animation;
+    const prevAmp = el.style.getPropertyValue("--deaf-shake-amp");
 
     const cleanup = () => {
       el.style.transform = prevTransform;
       el.style.transition = prevTransition;
       el.style.opacity = prevOpacity;
       el.style.willChange = prevWillChange;
+      el.style.animation = prevAnimation;
+      if (prevAmp) {
+        el.style.setProperty("--deaf-shake-amp", prevAmp);
+      } else {
+        el.style.removeProperty("--deaf-shake-amp");
+      }
     };
 
     if (shouldReduceMotion(reduceMotionOpt)) {
-      // Brief opacity pulse instead of heavy shake
+      // Opacity pulse only — no heavy shake
       el.style.transition = "opacity 80ms ease";
       el.style.opacity = "0.45";
       window.setTimeout(() => {
@@ -349,65 +383,88 @@ export function shakeElement(target, opts = {}) {
       return;
     }
 
+    ensureShakeKeyframes();
+    const amp = Math.max(14, Math.min(18, Number(amplitudePx) || 16));
+    el.style.setProperty("--deaf-shake-amp", `${amp}px`);
     el.style.willChange = "transform";
     el.style.transition = "none";
 
-    const keyframes = [
-      0,
-      -amplitudePx,
-      amplitudePx,
-      -amplitudePx * 0.7,
-      amplitudePx * 0.7,
-      -amplitudePx * 0.4,
-      amplitudePx * 0.35,
-      0,
-    ];
-    const stepMs = Math.max(30, Math.floor(durationMs / (keyframes.length - 1)));
-    let i = 0;
-
-    const tick = () => {
-      el.style.transform = `translateX(${keyframes[i]}px)`;
-      i += 1;
-      if (i >= keyframes.length) {
-        cleanup();
-        resolve(true);
-        return;
-      }
-      window.setTimeout(tick, stepMs);
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      cleanup();
+      resolve(true);
     };
-    tick();
+
+    // Prefer Web Animations API when available (same keyframes, reliable cleanup)
+    if (typeof el.animate === "function") {
+      const a = amp;
+      const anim = el.animate(
+        [
+          { transform: "translateX(0) rotate(0deg)" },
+          { transform: `translateX(${-a}px) rotate(-1.2deg)` },
+          { transform: `translateX(${a}px) rotate(1.2deg)` },
+          { transform: `translateX(${-a * 0.85}px) rotate(-0.9deg)` },
+          { transform: `translateX(${a * 0.85}px) rotate(0.9deg)` },
+          { transform: `translateX(${-a * 0.55}px) rotate(-0.5deg)` },
+          { transform: `translateX(${a * 0.55}px) rotate(0.5deg)` },
+          { transform: `translateX(${-a * 0.25}px) rotate(-0.2deg)` },
+          { transform: "translateX(0) rotate(0deg)" },
+        ],
+        {
+          duration: durationMs,
+          easing: "ease-in-out",
+          fill: "none",
+        }
+      );
+      anim.onfinish = finish;
+      anim.oncancel = finish;
+      return;
+    }
+
+    el.style.animation = `deaf-signal-shake ${durationMs}ms ease-in-out 1`;
+    const onEnd = () => {
+      el.removeEventListener("animationend", onEnd);
+      finish();
+    };
+    el.addEventListener("animationend", onEnd);
+    window.setTimeout(onEnd, durationMs + 80);
   });
 }
 
 /**
  * Trigger a vibration pattern when the Vibration API is available.
- * When vibrate is unsupported and `opts.shakeFallback !== false`, falls back to
- * {@link shakeElement} on `opts.target`, else `main`, else `document.body`.
+ * When `opts.shakeFallback !== false` (default), ALWAYS runs visual {@link shakeElement}
+ * as well — desktop browsers often expose `navigator.vibrate` that returns true but
+ * does nothing, so shake must not wait on vibrate failing.
+ * Optionally still calls `navigator.vibrate` when supported.
+ * Shake target: `opts.target`, else `main`, else `document.body`.
  * @param {number|number[]} [pattern=[200,100,200]] Duration(s) in ms
  * @param {object} [opts]
- * @param {boolean} [opts.shakeFallback=true] Use visual shake when vibrate missing
+ * @param {boolean} [opts.shakeFallback=true] Always run visual shake (in addition to vibrate)
  * @param {Element|string} [opts.target] Shake target (default: main, then body)
  * @param {boolean} [opts.reduceMotion] Passed through to shakeElement
- * @returns {boolean} true if vibrate ran OR shake fallback was started
+ * @returns {boolean} true if vibrate was attempted OR shake fallback was started
  */
 export function vibratePattern(pattern = [200, 100, 200], opts = {}) {
   const { shakeFallback = true, target, reduceMotion: reduceMotionOpt } = opts;
 
+  let vibrated = false;
   if (isVibrateSupported()) {
     try {
-      const ok = navigator.vibrate(pattern);
-      if (ok) return true;
+      vibrated = !!navigator.vibrate(pattern);
     } catch {
-      /* fall through to shake */
+      vibrated = false;
     }
   }
 
   if (shakeFallback === false) {
-    return false;
+    return vibrated;
   }
 
   if (typeof document === "undefined") {
-    return false;
+    return vibrated;
   }
 
   const shakeTarget =
@@ -416,10 +473,10 @@ export function vibratePattern(pattern = [200, 100, 200], opts = {}) {
     document.body;
 
   if (!shakeTarget) {
-    return false;
+    return vibrated;
   }
 
-  // Fire-and-forget visual cue; caller only needs to know a cue started.
+  // Always shake when fallback is on — desktop vibrate is often a no-op.
   shakeElement(shakeTarget, { reduceMotion: reduceMotionOpt });
   return true;
 }
@@ -498,8 +555,8 @@ export function pulseBorder(target, opts = {}) {
 
 /**
  * Combined alert: optional flash + banner + vibrate (with shake fallback).
- * When `flashColor` is omitted, flash uses auto contrast (white on dark, dark on light).
- * Urgent may still receive a light tint overlay preference but defaults to visible contrast.
+ * When `flashColor` is omitted: level `urgent` ALWAYS flashes red `#e53935`;
+ * other levels use auto contrast (white on dark, dark on light).
  * Passes `reduceMotion` through to flash / shake.
  * @param {string} message Banner text
  * @param {object} [opts]
@@ -507,7 +564,7 @@ export function pulseBorder(target, opts = {}) {
  * @param {boolean} [opts.banner=true]
  * @param {boolean} [opts.vibrate=true]
  * @param {"info"|"warn"|"urgent"} [opts.level="warn"]
- * @param {string} [opts.flashColor] Explicit flash color; omit for auto contrast
+ * @param {string} [opts.flashColor] Explicit flash color; omit for urgent red / auto contrast
  * @param {number|number[]} [opts.vibratePattern]
  * @param {boolean} [opts.shakeFallback=true]
  * @param {Element|string} [opts.shakeTarget]
@@ -534,9 +591,8 @@ export async function alertCombo(message, opts = {}) {
     if (flashColor !== undefined && flashColor !== null) {
       flashOpts.color = flashColor;
     } else if (level === "urgent") {
-      // Prefer visible white on dark; light pink tint only when background is light
-      const base = contrastFlashColor();
-      flashOpts.color = base === "#ffffff" ? "#ffffff" : "#c62828";
+      // Always red for urgent — never contrast white
+      flashOpts.color = "#e53935";
     }
     // else: omit color → flashScreen auto contrast
     tasks.push(flashScreen(flashOpts));

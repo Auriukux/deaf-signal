@@ -78,7 +78,7 @@
     <div class="card">
       <button type="button" id="btn-flash">Mirksėti ekraną (flash)</button>
       <button type="button" id="btn-banner" class="warn">Rodyti juostą (banner)</button>
-      <button type="button" id="btn-vibrate">Vibruoti / drebėjimas (fallback)</button>
+      <button type="button" id="btn-vibrate">Vibruoti / drebėti</button>
       <button type="button" id="btn-combo" class="urgent">Kombinuotas įspėjimas</button>
       <button type="button" id="btn-pulse">Pulsuoti rėmelį (pulseBorder)</button>
     </div>
@@ -111,6 +111,7 @@
 
     document.getElementById("btn-vibrate").addEventListener("click", () => {
       const ok = vibratePattern([120, 60, 120, 60, 240], {
+        target: document.querySelector(".card"),
         shakeFallback: true,
       });
       if (!ok) {
@@ -124,6 +125,7 @@
     document.getElementById("btn-combo").addEventListener("click", () => {
       alertCombo("Skubus įspėjimas — patikrinkite pranešimą!", {
         level: "urgent",
+        shakeTarget: ".card",
       });
     });
 
