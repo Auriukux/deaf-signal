@@ -22,39 +22,44 @@ import {
   vibratePattern,
   alertCombo,
   pulseBorder,
+  shakeElement,
+  contrastFlashColor,
   isVibrateSupported,
 } from "deaf-signal";
 
-await flashScreen({ color: "#ffeb3b", durationMs: 400 });
+// Auto contrast flash (white on dark backgrounds)
+await flashScreen({ durationMs: 400 });
 
 await showBanner("Important update — check your messages.", {
   level: "warn", // "info" | "warn" | "urgent"
   durationMs: 4000,
 });
 
-if (isVibrateSupported()) {
-  vibratePattern([200, 100, 200]);
-}
+// Vibrates when supported; otherwise visual shake
+vibratePattern([200, 100, 200], { shakeFallback: true });
 
 await alertCombo("Urgent alert!", { level: "urgent" });
 
 // Skip / soften motion (also auto-detects prefers-reduced-motion)
 await flashScreen({ reduceMotion: true });
 await pulseBorder("#focus-target", { reduceMotion: true });
+await shakeElement("main", { reduceMotion: true });
 ```
 
 ## API
 
 | Function | Description |
 | --- | --- |
-| `flashScreen(opts?)` | Full-viewport color flash; skips when `reduceMotion` / `prefers-reduced-motion` |
+| `flashScreen(opts?)` | Full-viewport flash; auto contrast color when `color` omitted (dark → white); skips when `reduceMotion` / `prefers-reduced-motion` |
+| `contrastFlashColor(root?)` | Helper: `#ffffff` on dark backgrounds, `#111111` on light |
 | `showBanner(message, opts?)` | Top banner with `role="alert"` |
-| `vibratePattern(pattern?)` | `navigator.vibrate` helper (safe fallback) |
+| `vibratePattern(pattern?, opts?)` | `navigator.vibrate` helper; optional visual `shakeElement` fallback when vibrate is missing (`shakeFallback`, default `true`) |
+| `shakeElement(target, opts?)` | CSS transform shake (drebėjimas); opacity pulse when reduced motion; cleans up styles after |
 | `isVibrateSupported()` | `true` when Vibration API is present |
-| `alertCombo(message, opts?)` | Flash + banner + vibrate (flash respects reduced motion) |
+| `alertCombo(message, opts?)` | Flash + banner + vibrate (shake fallback; flash uses auto contrast when `flashColor` omitted) |
 | `pulseBorder(target, opts?)` | Pulse element border; static outline when reduced motion |
 
-`flashScreen`, `pulseBorder`, and `alertCombo` accept optional `reduceMotion: boolean`. When omitted, they follow the OS `prefers-reduced-motion: reduce` media query.
+`flashScreen`, `pulseBorder`, `shakeElement`, and `alertCombo` accept optional `reduceMotion: boolean`. When omitted, they follow the OS `prefers-reduced-motion: reduce` media query.
 
 ### Vibration presets
 
@@ -83,7 +88,7 @@ npx --yes serve .
 # or: npm run demo
 ```
 
-Buttons are labeled in Lithuanian; the library API is English. With **Reduce motion** enabled, flash and pulse animations are skipped or softened automatically.
+Buttons are labeled in Lithuanian; the library API is English. With **Reduce motion** enabled, flash and pulse animations are skipped or softened automatically. Desktop browsers without Vibration API use visual shake instead.
 
 ## Why
 

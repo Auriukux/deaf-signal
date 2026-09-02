@@ -8,6 +8,8 @@ export {
   vibratePattern,
   alertCombo,
   pulseBorder,
+  shakeElement,
+  contrastFlashColor,
   isVibrateSupported,
 } from "./signals.js";
 
@@ -18,4 +20,3 @@ export {
   PRESETS,
   getPreset,
 } from "./presets.js";
-

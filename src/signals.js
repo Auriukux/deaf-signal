@@ -5,6 +5,7 @@
 
 const DEFAULT_FLASH_MS = 400;
 const DEFAULT_BANNER_MS = 3000;
+const DEFAULT_SHAKE_MS = 450;
 
 /**
  * Whether the user (or caller) prefers reduced motion.
@@ -26,6 +27,132 @@ function shouldReduceMotion(explicit) {
 }
 
 /**
+ * Resolve an Element from a selector string or Element.
+ * @param {Element|string|null|undefined} target
+ * @returns {Element|null}
+ */
+function resolveElement(target) {
+  if (typeof document === "undefined") return null;
+  if (target == null) return null;
+  if (typeof target === "string") {
+    try {
+      return document.querySelector(target);
+    } catch {
+      return null;
+    }
+  }
+  return target instanceof Element ? target : null;
+}
+
+/**
+ * Parse a CSS color string to RGB components (0–255).
+ * @param {string} color
+ * @returns {{r:number,g:number,b:number}|null}
+ */
+function parseCssColor(color) {
+  if (!color || typeof color !== "string") return null;
+  const c = color.trim().toLowerCase();
+  if (c === "transparent" || c === "rgba(0, 0, 0, 0)") return null;
+
+  const hex = c.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+  if (hex) {
+    let h = hex[1];
+    if (h.length === 3) {
+      h = h
+        .split("")
+        .map((ch) => ch + ch)
+        .join("");
+    }
+    return {
+      r: parseInt(h.slice(0, 2), 16),
+      g: parseInt(h.slice(2, 4), 16),
+      b: parseInt(h.slice(4, 6), 16),
+    };
+  }
+
+  const rgb = c.match(
+    /^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)(?:\s*,\s*([\d.]+))?\s*\)$/
+  );
+  if (rgb) {
+    const a = rgb[4] !== undefined ? Number(rgb[4]) : 1;
+    if (a === 0) return null;
+    return {
+      r: Math.min(255, Math.round(Number(rgb[1]))),
+      g: Math.min(255, Math.round(Number(rgb[2]))),
+      b: Math.min(255, Math.round(Number(rgb[3]))),
+    };
+  }
+
+  if (typeof document !== "undefined") {
+    try {
+      const probe = document.createElement("div");
+      probe.style.color = c;
+      probe.style.display = "none";
+      document.body.appendChild(probe);
+      const computed = getComputedStyle(probe).color;
+      probe.remove();
+      if (computed && computed !== c) return parseCssColor(computed);
+    } catch {
+      /* ignore */
+    }
+  }
+  return null;
+}
+
+/**
+ * Relative luminance (WCAG) for sRGB 0–255 channels.
+ * @param {number} r
+ * @param {number} g
+ * @param {number} b
+ * @returns {number}
+ */
+function relativeLuminance(r, g, b) {
+  const toLinear = (channel) => {
+    const s = channel / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  };
+  return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+}
+
+/**
+ * Walk ancestors for a usable opaque background color.
+ * @param {Element|null} start
+ * @returns {{r:number,g:number,b:number}|null}
+ */
+function sampleBackgroundRgb(start) {
+  if (typeof document === "undefined" || !start) return null;
+  let el = start;
+  while (el && el instanceof Element) {
+    try {
+      const bg = getComputedStyle(el).backgroundColor;
+      const rgb = parseCssColor(bg);
+      if (rgb) return rgb;
+    } catch {
+      /* ignore */
+    }
+    el = el.parentElement;
+  }
+  return null;
+}
+
+/**
+ * Pick a high-contrast flash color from page / body background luminance.
+ * Dark backgrounds → white; light → near-black.
+ * @param {Element|string} [root] Element or selector to sample (default: body)
+ * @returns {string} CSS color `#ffffff` or `#111111`
+ */
+export function contrastFlashColor(root) {
+  const el =
+    resolveElement(root) ||
+    (typeof document !== "undefined" ? document.body : null) ||
+    (typeof document !== "undefined" ? document.documentElement : null);
+
+  const rgb = sampleBackgroundRgb(el) || { r: 15, g: 20, b: 25 };
+  const lum = relativeLuminance(rgb.r, rgb.g, rgb.b);
+  return lum < 0.45 ? "#ffffff" : "#111111";
+}
+
+/**
  * True when the Vibration API is available (call still needs a user gesture on many browsers).
  * @returns {boolean}
  */
@@ -37,9 +164,11 @@ export function isVibrateSupported() {
 
 /**
  * Briefly flash the viewport with a solid overlay color.
+ * When `opts.color` is omitted, picks a contrast color from the page background
+ * (dark → white, light → near-black) via {@link contrastFlashColor}.
  * Honors `prefers-reduced-motion` (or `opts.reduceMotion`) by skipping the flash.
  * @param {object} [opts]
- * @param {string} [opts.color="#ffeb3b"] Overlay background color
+ * @param {string} [opts.color] Overlay background color (auto contrast when omitted)
  * @param {number} [opts.durationMs=400] How long the flash stays visible
  * @param {number} [opts.opacity=0.55] Overlay opacity 0–1
  * @param {boolean} [opts.reduceMotion] Force skip/respect reduced motion (default: OS preference)
@@ -47,11 +176,14 @@ export function isVibrateSupported() {
  */
 export function flashScreen(opts = {}) {
   const {
-    color = "#ffeb3b",
     durationMs = DEFAULT_FLASH_MS,
     opacity = 0.55,
     reduceMotion: reduceMotionOpt,
   } = opts;
+  const color =
+    opts.color !== undefined && opts.color !== null
+      ? opts.color
+      : contrastFlashColor();
 
   return new Promise((resolve) => {
     if (typeof document === "undefined") {
@@ -163,16 +295,133 @@ export function showBanner(message, opts = {}) {
 }
 
 /**
- * Trigger a vibration pattern when the Vibration API is available.
- * Falls back silently on unsupported devices / browsers.
- * @param {number|number[]} [pattern=[200,100,200]] Duration(s) in ms
- * @returns {boolean} true if vibrate was called
+ * Visual shake (drebėjimas) via CSS transform — fallback when Vibration API is missing.
+ * Honors `prefers-reduced-motion` / `opts.reduceMotion` with a brief opacity pulse
+ * (or no heavy shake). Restores inline styles afterward.
+ * @param {Element|string} target Element or CSS selector
+ * @param {object} [opts]
+ * @param {number} [opts.durationMs=450] Total shake duration
+ * @param {number} [opts.amplitudePx=8] Max horizontal offset in px
+ * @param {boolean} [opts.reduceMotion] Force skip/respect reduced motion
+ * @returns {Promise<boolean>} true if a visual cue ran
  */
-export function vibratePattern(pattern = [200, 100, 200]) {
-  if (!isVibrateSupported()) {
+export function shakeElement(target, opts = {}) {
+  const {
+    durationMs = DEFAULT_SHAKE_MS,
+    amplitudePx = 8,
+    reduceMotion: reduceMotionOpt,
+  } = opts;
+
+  return new Promise((resolve) => {
+    if (typeof document === "undefined") {
+      resolve(false);
+      return;
+    }
+    const el = resolveElement(target);
+    if (!el) {
+      resolve(false);
+      return;
+    }
+
+    const prevTransform = el.style.transform;
+    const prevTransition = el.style.transition;
+    const prevOpacity = el.style.opacity;
+    const prevWillChange = el.style.willChange;
+
+    const cleanup = () => {
+      el.style.transform = prevTransform;
+      el.style.transition = prevTransition;
+      el.style.opacity = prevOpacity;
+      el.style.willChange = prevWillChange;
+    };
+
+    if (shouldReduceMotion(reduceMotionOpt)) {
+      // Brief opacity pulse instead of heavy shake
+      el.style.transition = "opacity 80ms ease";
+      el.style.opacity = "0.45";
+      window.setTimeout(() => {
+        el.style.opacity = prevOpacity || "1";
+        window.setTimeout(() => {
+          cleanup();
+          resolve(true);
+        }, 100);
+      }, Math.min(180, durationMs));
+      return;
+    }
+
+    el.style.willChange = "transform";
+    el.style.transition = "none";
+
+    const keyframes = [
+      0,
+      -amplitudePx,
+      amplitudePx,
+      -amplitudePx * 0.7,
+      amplitudePx * 0.7,
+      -amplitudePx * 0.4,
+      amplitudePx * 0.35,
+      0,
+    ];
+    const stepMs = Math.max(30, Math.floor(durationMs / (keyframes.length - 1)));
+    let i = 0;
+
+    const tick = () => {
+      el.style.transform = `translateX(${keyframes[i]}px)`;
+      i += 1;
+      if (i >= keyframes.length) {
+        cleanup();
+        resolve(true);
+        return;
+      }
+      window.setTimeout(tick, stepMs);
+    };
+    tick();
+  });
+}
+
+/**
+ * Trigger a vibration pattern when the Vibration API is available.
+ * When vibrate is unsupported and `opts.shakeFallback !== false`, falls back to
+ * {@link shakeElement} on `opts.target`, else `main`, else `document.body`.
+ * @param {number|number[]} [pattern=[200,100,200]] Duration(s) in ms
+ * @param {object} [opts]
+ * @param {boolean} [opts.shakeFallback=true] Use visual shake when vibrate missing
+ * @param {Element|string} [opts.target] Shake target (default: main, then body)
+ * @param {boolean} [opts.reduceMotion] Passed through to shakeElement
+ * @returns {boolean} true if vibrate ran OR shake fallback was started
+ */
+export function vibratePattern(pattern = [200, 100, 200], opts = {}) {
+  const { shakeFallback = true, target, reduceMotion: reduceMotionOpt } = opts;
+
+  if (isVibrateSupported()) {
+    try {
+      const ok = navigator.vibrate(pattern);
+      if (ok) return true;
+    } catch {
+      /* fall through to shake */
+    }
+  }
+
+  if (shakeFallback === false) {
     return false;
   }
-  return navigator.vibrate(pattern);
+
+  if (typeof document === "undefined") {
+    return false;
+  }
+
+  const shakeTarget =
+    resolveElement(target) ||
+    document.querySelector("main") ||
+    document.body;
+
+  if (!shakeTarget) {
+    return false;
+  }
+
+  // Fire-and-forget visual cue; caller only needs to know a cue started.
+  shakeElement(shakeTarget, { reduceMotion: reduceMotionOpt });
+  return true;
 }
 
 /**
@@ -248,17 +497,21 @@ export function pulseBorder(target, opts = {}) {
 }
 
 /**
- * Combined alert: optional flash + banner + vibrate.
- * Passes `reduceMotion` through to flash (skipped when reduced motion is active).
+ * Combined alert: optional flash + banner + vibrate (with shake fallback).
+ * When `flashColor` is omitted, flash uses auto contrast (white on dark, dark on light).
+ * Urgent may still receive a light tint overlay preference but defaults to visible contrast.
+ * Passes `reduceMotion` through to flash / shake.
  * @param {string} message Banner text
  * @param {object} [opts]
  * @param {boolean} [opts.flash=true]
  * @param {boolean} [opts.banner=true]
  * @param {boolean} [opts.vibrate=true]
  * @param {"info"|"warn"|"urgent"} [opts.level="warn"]
- * @param {string} [opts.flashColor]
+ * @param {string} [opts.flashColor] Explicit flash color; omit for auto contrast
  * @param {number|number[]} [opts.vibratePattern]
- * @param {boolean} [opts.reduceMotion] Force skip/respect reduced motion for flash
+ * @param {boolean} [opts.shakeFallback=true]
+ * @param {Element|string} [opts.shakeTarget]
+ * @param {boolean} [opts.reduceMotion] Force skip/respect reduced motion for flash/shake
  * @returns {Promise<{banner: HTMLElement|null, vibrated: boolean}>}
  */
 export async function alertCombo(message, opts = {}) {
@@ -269,24 +522,24 @@ export async function alertCombo(message, opts = {}) {
     level = "warn",
     flashColor,
     vibratePattern: vPattern = [200, 80, 200, 80, 400],
+    shakeFallback = true,
+    shakeTarget,
     reduceMotion: reduceMotionOpt,
   } = opts;
-
-  const flashColors = {
-    info: "#64b5f6",
-    warn: "#ffeb3b",
-    urgent: "#ef5350",
-  };
 
   const reduce = shouldReduceMotion(reduceMotionOpt);
   const tasks = [];
   if (flash && !reduce) {
-    tasks.push(
-      flashScreen({
-        color: flashColor || flashColors[level] || flashColors.warn,
-        reduceMotion: false,
-      })
-    );
+    const flashOpts = { reduceMotion: false };
+    if (flashColor !== undefined && flashColor !== null) {
+      flashOpts.color = flashColor;
+    } else if (level === "urgent") {
+      // Prefer visible white on dark; light pink tint only when background is light
+      const base = contrastFlashColor();
+      flashOpts.color = base === "#ffffff" ? "#ffffff" : "#c62828";
+    }
+    // else: omit color → flashScreen auto contrast
+    tasks.push(flashScreen(flashOpts));
   }
 
   let bannerEl = null;
@@ -296,7 +549,11 @@ export async function alertCombo(message, opts = {}) {
 
   let vibrated = false;
   if (vibrate) {
-    vibrated = vibratePattern(vPattern);
+    vibrated = vibratePattern(vPattern, {
+      shakeFallback,
+      target: shakeTarget,
+      reduceMotion: reduceMotionOpt,
+    });
   }
 
   await Promise.all(tasks);
