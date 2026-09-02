@@ -1,27 +1,45 @@
 # Contributing
 
-Thanks for helping improve **deaf-signal** — visual + haptic alerts with no sound.
+Thanks for helping improve **deaf-signal** - visual + haptic alerts with no sound.
 
 ## Run the demo
 
-1. Clone the repo and open `examples/demo.html` in a modern browser, **or**
-2. From the repo root:
+Preferred - from the repo root:
+
+```bash
+npm run demo
+```
+
+Then open **http://localhost:3000** (or `/demo`). `index.html` / `serve.json` redirect to `examples/demo.html`.
+
+Same server without the npm script:
 
 ```bash
 npx --yes serve .
 ```
 
-Then open the printed local URL and try the buttons (flash, banner, vibrate, combo, pulse).
+The demo UI has an **LT | EN** language toggle. Vibration: mobile often gets a real vibrate; desktop uses a visual shake fallback when `shakeFallback` is on.
 
-Vibration requires a device/browser that supports the Vibration API (often mobile Chrome / Android). Desktop browsers typically skip vibrate silently.
+**PowerShell tip:** use `npm run demo` from the clone root (no `&&` needed). If the package is installed as a dependency, see the README for `--prefix` / `cd` options.
 
 ## Library entry
 
 Import from the package root (ESM):
 
 ```js
-import { flashScreen, showBanner, vibratePattern, alertCombo, pulseBorder } from "deaf-signal";
+import {
+  flashScreen,
+  showBanner,
+  vibratePattern,
+  alertCombo,
+  pulseBorder,
+  shakeElement,
+  contrastFlashColor,
+  isVibrateSupported,
+} from "deaf-signal";
 ```
+
+Presets (`PATTERN_*`, `PRESETS`, `getPreset`) are optional via `"deaf-signal/presets"` or the same package root.
 
 Or load `../src/index.js` from the demo page as shown in `examples/demo.html`.
 
@@ -29,4 +47,5 @@ Or load `../src/index.js` from the demo page as shown in `examples/demo.html`.
 
 - Keep changes focused and small.
 - Prefer accessibility-friendly defaults (`role="alert"`, high contrast).
-- Do not add sound-based APIs — this library is intentionally silent.
+- Keep demo i18n **LT + EN** in sync if changing UI strings.
+- Do not add sound-based APIs - this library is intentionally silent.
