@@ -2,6 +2,7 @@
  * Optional microphone loud-sound detection (Web Audio only — no ML / cloud).
  * High RMS threshold by design: quiet rooms and soft speech should NOT fire.
  * RMS loudness ≠ siren / door / horn classification — peaks only, not event type.
+ * Active sessions auto-stop on pagehide / visibility hidden / beforeunload (mic leak guard).
  * @module deaf-signal/listen
  */
 
@@ -72,6 +73,7 @@ export function stopLoudListen(): void;
  * Start microphone loud-sound detection.
  * Requires a secure context (HTTPS / localhost) and mic permission.
  * A second call aborts any in-flight first start.
+ * Auto-stops on pagehide / beforeunload / visibility hidden to release the mic.
  */
 export function startLoudListen(
   opts?: StartLoudListenOptions

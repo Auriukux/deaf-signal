@@ -2,6 +2,7 @@
  * Optional microphone loud-sound detection (Web Audio only — no ML / cloud).
  * High RMS threshold by design: quiet rooms and soft speech should NOT fire.
  * RMS loudness ≠ siren / door / horn classification — peaks only, not event type.
+ * Active sessions auto-stop on pagehide / visibility hidden / beforeunload to avoid mic leaks.
  * @module deaf-signal/listen
  */
 
@@ -162,6 +163,9 @@ function computeRms(analyser, buffer) {
  * A second call aborts any in-flight first start (generation token + stop
  * pending tracks) before opening a new session.
  *
+ * Registers `pagehide`, `beforeunload`, and `visibilitychange` (hidden) handlers
+ * that call `stop()` so the mic track is released when the page is hidden or unloaded.
+ *
  * Default `alert` is `"urgent"` (neutral loudPeak). Mic stays separate from product
  * alerts (`ALERT_SIREN` / door / horn) — those belong on product preset buttons /
  * `runAlert` only. Pass `alert: false` + `onLoud` for callback-only.
@@ -261,9 +265,31 @@ export async function startLoudListen(opts = {}) {
   let timerId = null;
   let rafId = null;
 
+  function detachLifecycle() {
+    if (typeof window !== "undefined") {
+      window.removeEventListener("pagehide", onLifecycleStop);
+      window.removeEventListener("beforeunload", onLifecycleStop);
+    }
+    if (typeof document !== "undefined") {
+      document.removeEventListener("visibilitychange", onVisibilityStop);
+    }
+  }
+
+  function onLifecycleStop() {
+    cleanup();
+  }
+
+  function onVisibilityStop() {
+    if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+      cleanup();
+    }
+  }
+
   function cleanup() {
     if (stopped) return;
     stopped = true;
+    detachLifecycle();
+    controller.active = false;
     if (timerId != null) {
       clearInterval(timerId);
       timerId = null;
@@ -367,5 +393,15 @@ export async function startLoudListen(opts = {}) {
 
   pendingStream = null;
   activeController = controller;
+
+  // Stop mic when the page is hidden or unloaded (avoid leaking the track).
+  if (typeof window !== "undefined") {
+    window.addEventListener("pagehide", onLifecycleStop);
+    window.addEventListener("beforeunload", onLifecycleStop);
+  }
+  if (typeof document !== "undefined") {
+    document.addEventListener("visibilitychange", onVisibilityStop);
+  }
+
   return controller;
 }

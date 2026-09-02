@@ -409,10 +409,10 @@ export function showBanner(message, opts = {}) {
     banner.setAttribute("role", "alert");
     Object.assign(banner.style, {
       position: "fixed",
-      top: "0",
+      top: "env(safe-area-inset-top, 0px)",
       left: "0",
       right: "0",
-      padding: "14px 48px 14px 16px",
+      padding: "14px max(48px, env(safe-area-inset-right, 0px)) 14px max(16px, env(safe-area-inset-left, 0px))",
       background: colors.bg,
       color: colors.fg,
       fontFamily: "system-ui, sans-serif",

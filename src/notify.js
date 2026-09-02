@@ -259,7 +259,7 @@ async function runVisibleCues(title, opts) {
  * @param {number|number[]} [opts.vibrate] Pattern for notification + in-page vibrate
  * @param {boolean} [opts.flash=true] When visible: flash the screen
  * @param {boolean} [opts.shake=true] When visible: shake / vibrate
- * @param {boolean} [opts.combo=false] When visible: use {@link alertCombo} (banner + flash + vibrate)
+ * @param {boolean} [opts.combo=false] When visible: use {@link alertCombo} (banner + flash + vibrate); skips Notification.vibrate while visible so haptic is not doubled
  * @param {Element|string} [opts.shakeTarget] Shake / pulse target
  * @param {boolean} [opts.requireInteraction] Keep notification until dismissed
  * @param {boolean} [opts.silent] Suppress notification sound/vibrate (library stays silent either way)
@@ -279,7 +279,13 @@ export async function notifyAlert(title, opts = {}) {
     (hidden || opts.notification !== false);
 
   if (shouldNotify) {
-    notification = showSystemNotification(title, opts);
+    // When visible + combo, alertCombo owns the haptic path — skip
+    // Notification.vibrate so we do not stack a second vibrate (match runAlert).
+    const notifyOpts =
+      !hidden && opts.combo === true
+        ? { ...opts, vibrate: false }
+        : opts;
+    notification = showSystemNotification(title, notifyOpts);
   }
 
   if (!hidden) {

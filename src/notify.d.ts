@@ -34,7 +34,7 @@ export interface NotifyAlertOptions {
   flash?: boolean;
   /** When visible: shake / vibrate (default true) */
   shake?: boolean;
-  /** When visible: use alertCombo (default false) */
+  /** When visible: use alertCombo (default false); skips Notification.vibrate while visible to avoid double haptic */
   combo?: boolean;
   /** Shake / pulse target */
   shakeTarget?: Element | string | null;

@@ -86,9 +86,9 @@ npm run demo
 
 The demo UI has an LT | EN language toggle (choice saved in `localStorage`); the library API is English. With **Reduce motion** enabled, flash and pulse animations are skipped or softened automatically. Desktop browsers often expose Vibration API that does nothing — with `shakeFallback` (default on), visual shake always runs so the cue is visible. **iPhone Safari:** no Vibration API — visual shake only. Demo copy marks product buttons as **manual cues** and mic as **loudness peak only**. Flashes are rate-limited; the demo shows a short photosensitive-epilepsy warning.
 
-`/` and `/demo` redirect to the demo page via `index.html` / `serve.json`.
+**GitHub Pages** (no serve.json redirects on hosting): open /, /demo/, or /examples/demo.html. Local npx serve still uses serve.json for / and /demo.
 
-**PWA:** with `npm run demo` reachable on your phone (same Wi-Fi or a localhost tunnel), open the demo and use the browser / **Install app** prompt to add deaf-signal to the home screen. Installed PWAs are the realistic path for background Notification alerts when the tab is not focused.
+**PWA:** with `npm run demo` reachable on your phone (same Wi-Fi or a localhost tunnel), open the demo and use the browser / **Install app** prompt to add deaf-signal to the home screen. Installed PWAs are the realistic path for background Notification alerts when the tab is not focused. A normal browser tab must stay alive (not discarded) for page-triggered Notifications; closing or unloading the tab stops that path.
 
 ## TypeScript
 
@@ -215,14 +215,14 @@ Existing `PATTERN_*` / `getPreset()` vibrate-only presets remain unchanged.
 
 ### Background notifications
 
-`requestNotifyPermission()` + `notifyAlert(title, opts?)` use the browser **Notification** API (zero deps). When the document is hidden, the system notification (and notification `vibrate` where supported) is the main cue. When the tab is visible, `notifyAlert` also calls the existing flash / shake / combo helpers.
+`requestNotifyPermission()` + `notifyAlert(title, opts?)` use the browser **Notification** API (zero deps). When the document is hidden, the system notification (and notification `vibrate` where supported) is the main cue. When the tab is visible, `notifyAlert` also calls the existing flash / shake / combo helpers (combo:true uses one haptic path via alertCombo and skips stacking Notification.vibrate while visible).
 
-Browsers only grant permission after a **user gesture**. True OS-level background delivery usually requires an **installed PWA** (and browser support) — a normal tab may pause or throttle when fully backgrounded. Missing Notification API → graceful no-ops for the notification part; visible visual cues still run.
+Browsers only grant permission after a **user gesture**. True OS-level background delivery usually requires an **installed PWA** (and browser support) — a normal tab may pause or throttle when fully backgrounded, and the tab must remain alive for page-created Notifications (closing/discarding the tab ends that path). Missing Notification API → graceful no-ops for the notification part; visible visual cues still run.
 
 
 ### Optional mic loud listen
 
-`startLoudListen(opts?)` is an **optional** helper, kept **separate from product alerts** (`ALERT_SIREN` / door / horn / call). It asks for microphone permission, measures RMS via Web Audio (`AnalyserNode`, fftSize 2048), and fires only on **strong loudness peaks / loudPeak** (default threshold **0.25** RMS, cooldown `minIntervalMs` 2500). It is **not** a sound classifier — no ML, no cloud — **RMS ≠ siren / door / horn**. Quiet rooms / soft speech should not trip. On exceed: `onLoud({ level, rms })` and/or a **neutral** auto `runAlert("urgent")` (default); pass `alert: false` for callback-only. Product event names (`siren`, `door`, …) are remapped to `"urgent"`; **unknown** names skip the auto-alert entirely (no urgent fire) — use the product preset buttons / `runAlert("siren")` for those cues. A second `startLoudListen` aborts any in-flight first start. Always call `stopLoudListen()` / `controller.stop()` to release the mic. Requires a secure context (HTTPS / localhost).
+`startLoudListen(opts?)` is an **optional** helper, kept **separate from product alerts** (`ALERT_SIREN` / door / horn / call). It asks for microphone permission, measures RMS via Web Audio (`AnalyserNode`, fftSize 2048), and fires only on **strong loudness peaks / loudPeak** (default threshold **0.25** RMS, cooldown `minIntervalMs` 2500). It is **not** a sound classifier — no ML, no cloud — **RMS ≠ siren / door / horn**. Quiet rooms / soft speech should not trip. On exceed: `onLoud({ level, rms })` and/or a **neutral** auto `runAlert("urgent")` (default); pass `alert: false` for callback-only. Product event names (`siren`, `door`, …) are remapped to `"urgent"`; **unknown** names skip the auto-alert entirely (no urgent fire) — use the product preset buttons / `runAlert("siren")` for those cues. A second `startLoudListen` aborts any in-flight first start. Always call `stopLoudListen()` / `controller.stop()` to release the mic; sessions also auto-stop on pagehide / beforeunload / visibility hidden so the mic is not left open. Requires a secure context (HTTPS / localhost).
 
 ```js
 import { startLoudListen, stopLoudListen, DEFAULT_LOUD_THRESHOLD } from "deaf-signal";
