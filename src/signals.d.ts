@@ -31,13 +31,22 @@ export const FLASH_RATE_WINDOW_MS: 1000;
 /** Minimum gap between flash starts (ms). */
 export const FLASH_MIN_GAP_MS: 400;
 
-/** Reset the shared flash rate-limit window (tests). */
+/**
+ * Reset the shared flash rate-limit window.
+ * Test / long-page helper — available via `deaf-signal/signals`, not the package root.
+ */
 export function resetFlashRateLimit(): void;
 
-/** Whether a new full flash may start without exceeding the rate limit. */
+/**
+ * Whether a new full flash may start without exceeding the rate limit (pure query).
+ * Test helper — available via `deaf-signal/signals`, not the package root.
+ */
 export function canStartFlash(now?: number): boolean;
 
-/** Record a flash start for the shared rate limiter. */
+/**
+ * Record a flash start for the shared rate limiter (call only when a flash begins).
+ * Test helper — available via `deaf-signal/signals`, not the package root.
+ */
 export function noteFlashStart(now?: number): void;
 
 

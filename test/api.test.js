@@ -189,6 +189,8 @@ describe("signals pure helpers", () => {
     assert.equal(FLASH_MIN_GAP_MS, 400);
     const t0 = 1_000_000;
     assert.equal(canStartFlash(t0), true);
+    // Query alone must not mutate — still allowed before noteFlashStart
+    assert.equal(canStartFlash(t0), true);
     noteFlashStart(t0);
     // Too soon for min gap
     assert.equal(canStartFlash(t0 + 100), false);
@@ -251,26 +253,39 @@ describe("listen helpers", () => {
     assert.equal(DEFAULT_LOUD_ALERT, "urgent");
   });
 
-  it("resolveLoudAlertName: default urgent, false skips, product/unknown fail-closed", () => {
+  it("resolveLoudAlertName: default urgent, false/unknown skip, product → urgent", () => {
     assert.equal(resolveLoudAlertName(undefined), "urgent");
     assert.equal(resolveLoudAlertName(null), "urgent");
     assert.equal(resolveLoudAlertName(false), null);
     assert.equal(resolveLoudAlertName("urgent"), "urgent");
-    // Mic must not wire to product classifier names
+    // Mic must not wire to product classifier names → remap to urgent
     assert.equal(resolveLoudAlertName("siren"), "urgent");
     assert.equal(resolveLoudAlertName("door"), "urgent");
     assert.equal(resolveLoudAlertName("horn"), "urgent");
     assert.equal(resolveLoudAlertName("call"), "urgent");
     assert.equal(resolveLoudAlertName("message"), "urgent");
     assert.equal(resolveLoudAlertName("SIREN"), "urgent");
-    // Unknown names fail-closed to urgent (no silent custom wiring)
-    assert.equal(resolveLoudAlertName("nope"), "urgent");
-    assert.equal(resolveLoudAlertName("custom-alert"), "urgent");
+    // Unknown names skip alert entirely (true fail-closed — no urgent fire)
+    assert.equal(resolveLoudAlertName("nope"), null);
+    assert.equal(resolveLoudAlertName("custom-alert"), null);
   });
 
   it("isListenSupported is false in Node; getInputLevel null when idle", () => {
     assert.equal(typeof isListenSupported(), "boolean");
     assert.equal(isListenSupported(), false);
     assert.equal(getInputLevel(), null);
+  });
+});
+
+describe("package root public API", () => {
+  it("does not re-export flash rate-limit test helpers", async () => {
+    const root = await import("../src/index.js");
+    assert.equal("resetFlashRateLimit" in root, false);
+    assert.equal("canStartFlash" in root, false);
+    assert.equal("noteFlashStart" in root, false);
+    const signals = await import("../src/signals.js");
+    assert.equal(typeof signals.resetFlashRateLimit, "function");
+    assert.equal(typeof signals.canStartFlash, "function");
+    assert.equal(typeof signals.noteFlashStart, "function");
   });
 });
