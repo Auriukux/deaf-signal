@@ -7,11 +7,20 @@ Flash the screen, show a high-contrast banner, vibrate when supported, or combin
 
 ## Install
 
+### Use as dependency
+
 ```bash
 npm i github:Auriukux/deaf-signal
 ```
 
-Optional: clone the repo or copy `src/` into your project and import the modules directly.
+### Clone / develop
+
+```bash
+git clone https://github.com/Auriukux/deaf-signal.git
+cd deaf-signal
+```
+
+You can also copy `src/` into your project and import the modules directly.
 
 ## Usage
 
@@ -82,12 +91,33 @@ vibratePattern(getPreset("urgent"));
 
 ## Demo
 
-Open `examples/demo.html` in a browser. Prefer a local static server (ESM imports may be blocked from `file://`):
+The demo script lives **inside the package**, so how you run it depends on how you installed:
+
+### Use as dependency
+
+After `npm i github:Auriukux/deaf-signal` in a parent project:
 
 ```bash
-npx --yes serve .
-# or: npm run demo
+npm run demo --prefix node_modules/deaf-signal
 ```
+
+Or:
+
+```bash
+cd node_modules/deaf-signal && npm run demo
+```
+
+(`npm run demo` from the parent folder fails with **Missing script** — the script is not on the parent `package.json`.)
+
+### Clone / develop
+
+From the repo root:
+
+```bash
+npm run demo
+```
+
+Then open **http://localhost:3000** (or `/demo`). ESM imports may be blocked from `file://`, so prefer this local server over opening `examples/demo.html` directly.
 
 The demo UI has an LT | EN language toggle (choice saved in `localStorage`); the library API is English. With **Reduce motion** enabled, flash and pulse animations are skipped or softened automatically. Desktop browsers often expose Vibration API that does nothing — with `shakeFallback` (default on), visual shake always runs so the cue is visible.
 
@@ -108,5 +138,5 @@ MIT © Auriukux
 `deaf-signal` — maža ESM biblioteka **vizualiems ir haptic (vibracijos / drebėjimo) įspėjimams**.
 Tinka prieinamumui kurtiesiems / neprigirdintiems.
 
-Demo: `npm run demo` → `http://localhost:3000` (arba `/demo`). Viršuje — **LT | EN** perjungimas.
+Demo: priklausomybė — `npm run demo --prefix node_modules/deaf-signal` (arba `cd node_modules/deaf-signal && npm run demo`); klonuojant — `npm run demo` → `http://localhost:3000` (arba `/demo`). Viršuje — **LT | EN** perjungimas.
 Skubus (urgent) flash — raudonas; jei vibracija neveikia (pvz. desktop), veikia vizualus drebėjimas.
