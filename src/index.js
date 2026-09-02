@@ -14,6 +14,12 @@ export {
   clampShakeAmplitude,
   SHAKE_AMPLITUDE_MIN,
   SHAKE_AMPLITUDE_MAX,
+  FLASH_RATE_MAX,
+  FLASH_RATE_WINDOW_MS,
+  FLASH_MIN_GAP_MS,
+  resetFlashRateLimit,
+  canStartFlash,
+  noteFlashStart,
 } from "./signals.js";
 
 export {

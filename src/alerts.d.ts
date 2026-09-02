@@ -81,8 +81,9 @@ export interface RunAlertResult {
 /**
  * Run a named product alert: alertCombo plus optional notifyAlert
  * when Notification permission is already granted.
+ * Unknown names: console.warn + returns false (fail-closed).
  */
 export function runAlert(
   name: AlertName | string,
   opts?: RunAlertOptions
-): Promise<RunAlertResult>;
+): Promise<RunAlertResult | false>;

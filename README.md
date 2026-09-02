@@ -7,6 +7,12 @@ Flash the screen, show a high-contrast banner, vibrate when supported, or combin
 
 **Live demo:** [https://auriukux.github.io/deaf-signal/](https://auriukux.github.io/deaf-signal/) ([examples/demo.html](https://auriukux.github.io/deaf-signal/examples/demo.html))
 
+> **Presets are cues you trigger — not classifiers.** `ALERT_SIREN` / `ALERT_HORN` / door / call are **presentation** patterns your app runs when *you* decide an event happened. They do **not** detect sirens, horns, or other sounds.
+
+> **iPhone / iOS Safari:** `navigator.vibrate` **does not work**. Users get **visual shake only**. True haptics need a native app or installed-app constraints — **not** the Vibration API.
+
+> **Photosensitivity:** full-viewport flashes are **rate-limited** (about max 2 full flashes / 1s, WCAG-minded to stay under 3 flashes/second). Screen flashing can affect people with photosensitive epilepsy — use reduce-motion and avoid rapid manual triggering.
+
 Not sure which folder you should be in? This README is a map. Follow the numbered steps and you will always know the path.
 
 ## Install + Demo
@@ -78,7 +84,7 @@ npm run demo
 
 **Note:** `npm run demo` in the **parent** folder fails with **Missing script** — the demo script lives inside the package, not on your project's `package.json`.
 
-The demo UI has an LT | EN language toggle (choice saved in `localStorage`); the library API is English. With **Reduce motion** enabled, flash and pulse animations are skipped or softened automatically. Desktop browsers often expose Vibration API that does nothing — with `shakeFallback` (default on), visual shake always runs so the cue is visible.
+The demo UI has an LT | EN language toggle (choice saved in `localStorage`); the library API is English. With **Reduce motion** enabled, flash and pulse animations are skipped or softened automatically. Desktop browsers often expose Vibration API that does nothing — with `shakeFallback` (default on), visual shake always runs so the cue is visible. **iPhone Safari:** no Vibration API — visual shake only. Demo copy marks product buttons as **manual cues** and mic as **loudness peak only**. Flashes are rate-limited; the demo shows a short photosensitive-epilepsy warning.
 
 `/` and `/demo` redirect to the demo page via `index.html` / `serve.json`.
 
@@ -137,15 +143,15 @@ await notifyAlert("Incoming alert", {
 });
 
 // Product-level presentation presets (siren / horn / door / …)
-await runAlert("siren");
-await runAlert("horn", { message: "Horn nearby!" });
+await runAlert("siren"); // presentation cue — not "siren detected"
+await runAlert("horn", { message: "Loud alert cue" });
 ```
 
 ## API
 
 | Function | Description |
 | --- | --- |
-| `flashScreen(opts?)` | Full-viewport flash; auto contrast color when `color` omitted (dark → white); skips when `reduceMotion` / `prefers-reduced-motion` |
+| `flashScreen(opts?)` | Full-viewport flash; auto contrast when `color` omitted; **rate-limited** for photosensitivity; skips when `reduceMotion` / `prefers-reduced-motion` |
 | `contrastFlashColor(root?)` | Helper: `#ffffff` on dark backgrounds, `#111111` on light |
 | `showBanner(message, opts?)` | Top banner with `role="alert"` |
 | `vibratePattern(pattern?, opts?)` | Calls `navigator.vibrate` when available; when `shakeFallback` is on (default `true`), **always** runs visual `shakeElement` too (desktop vibrate is often a no-op) |
@@ -157,7 +163,7 @@ await runAlert("horn", { message: "Horn nearby!" });
 | `notifyAlert(title, opts?)` | System Notification when permitted; when the page is visible also flash / shake / combo |
 | `isNotificationSupported()` / `getNotifyPermission()` | Feature / permission helpers |
 | `getAlert(name)` | Look up a product alert preset (`call` / `message` / `door` / `siren` / `horn` / `urgent`) |
-| `runAlert(name, opts?)` | Run preset via `alertCombo` + optional `notifyAlert` when Notification permission is granted |
+| `runAlert(name, opts?)` | Run preset via `alertCombo` + optional `notifyAlert`; **unknown name → `false` + `console.warn`** (fail-closed) |
 | `isListenSupported()` / `getInputLevel()` | Feature helper / live RMS while listening |
 | `startLoudListen(opts?)` / `stopLoudListen()` | Optional mic **loud**-sound detect (Web Audio RMS); high threshold by default |
 
@@ -184,15 +190,15 @@ vibratePattern(getPreset("urgent"));
 
 ### Product alert presets
 
-Named **presentation** presets live in `src/alerts.js` (also re-exported from the package root). They bundle banner copy, severity, flash color, vibrate pattern, and shake options for common danger / event cues your app may already detect — **not** a sound classifier (no microphone, no ML).
+Named **presentation** presets live in `src/alerts.js` (also re-exported from the package root). They bundle banner copy, severity, flash color, vibrate pattern, and shake options for common event **cues you trigger** — **not** a sound classifier (no microphone, no ML). **Bold:** presets are cues, not detectors.
 
 | Export | Default EN message | Level | Typical use |
 | --- | --- | --- | --- |
 | `ALERT_CALL` | Incoming call | `warn` | Ring / call cue |
 | `ALERT_MESSAGE` | New message | `info` | Soft notification |
 | `ALERT_DOOR` | Door / doorbell | `warn` | Doorbell / knock |
-| `ALERT_SIREN` | Siren detected nearby | `urgent` | Emergency siren presentation |
-| `ALERT_HORN` | Horn / vehicle alert | `urgent` | Vehicle horn presentation |
+| `ALERT_SIREN` | Urgent alert | `urgent` | Loud / urgent **cue** (not detection) |
+| `ALERT_HORN` | Loud alert cue | `urgent` | Loud **cue** (not horn recognition) |
 | `ALERT_URGENT` | Urgent alert | `urgent` | Generic high-priority |
 | `ALERTS` / `getAlert(name)` / `runAlert(name, opts?)` | map / lookup / run | | `runAlert("siren")` |
 
@@ -215,7 +221,7 @@ Browsers only grant permission after a **user gesture**. True OS-level backgroun
 
 ### Optional mic loud listen
 
-`startLoudListen(opts?)` is an **optional** helper, kept **separate from product alerts** (`ALERT_SIREN` / door / horn / call). It asks for microphone permission, measures RMS via Web Audio (`AnalyserNode`, fftSize 2048), and fires only on **strong loudness peaks / loudPeak** (default threshold **0.25** RMS, cooldown `minIntervalMs` 2500). It is **not** a sound classifier — no ML, no cloud — **RMS ≠ siren / door / horn**. Quiet rooms / soft speech should not trip. On exceed: `onLoud({ level, rms })` and/or a **neutral** auto `runAlert("urgent")` (default); pass `alert: false` for callback-only. Passing product event names (`siren`, `door`, …) is remapped to `"urgent"` — use the product preset buttons / `runAlert("siren")` for those cues. A second `startLoudListen` aborts any in-flight first start. Always call `stopLoudListen()` / `controller.stop()` to release the mic. Requires a secure context (HTTPS / localhost).
+`startLoudListen(opts?)` is an **optional** helper, kept **separate from product alerts** (`ALERT_SIREN` / door / horn / call). It asks for microphone permission, measures RMS via Web Audio (`AnalyserNode`, fftSize 2048), and fires only on **strong loudness peaks / loudPeak** (default threshold **0.25** RMS, cooldown `minIntervalMs` 2500). It is **not** a sound classifier — no ML, no cloud — **RMS ≠ siren / door / horn**. Quiet rooms / soft speech should not trip. On exceed: `onLoud({ level, rms })` and/or a **neutral** auto `runAlert("urgent")` (default); pass `alert: false` for callback-only. Passing product event names (`siren`, `door`, …) **or any unknown name** is remapped to `"urgent"` (fail-closed) — use the product preset buttons / `runAlert("siren")` for those cues. A second `startLoudListen` aborts any in-flight first start. Always call `stopLoudListen()` / `controller.stop()` to release the mic. Requires a secure context (HTTPS / localhost).
 
 ```js
 import { startLoudListen, stopLoudListen, DEFAULT_LOUD_THRESHOLD } from "deaf-signal";
@@ -269,4 +275,6 @@ Nežinote, kuriame aplanke esate? Šis README — žemėlapis. Eikite pagal nume
 
 **Pastaba:** tėviniame aplanke `npm run demo` duoda **Missing script** — demo skriptas yra tik pakete.
 
-Skubus (urgent) flash — raudonas; jei vibracija neveikia (pvz. desktop), veikia vizualus drebėjimas.
+Skubus (urgent) flash — raudonas; jei vibracija neveikia (pvz. desktop ar **iPhone Safari**), veikia vizualus drebėjimas (`navigator.vibrate` iOS neveikia).
+
+**Svarbu:** produkto presetai (`ALERT_SIREN` ir kt.) — tai **signalai, kuriuos paleidžiate patys**, ne klasifikatoriai. Mirksėjimas ribojamas dėl fotosensityvumo / epilepsijos.

@@ -209,6 +209,57 @@ export function settleFlashResolve(previousResolve) {
 }
 
 /**
+ * Photosensitivity: WCAG-minded flash rate limit (shared by flashScreen / alertCombo).
+ * Prevent ≥3 full flashes per second — allow at most {@link FLASH_RATE_MAX} starts
+ * inside {@link FLASH_RATE_WINDOW_MS}, with a minimum gap of {@link FLASH_MIN_GAP_MS}.
+ */
+export const FLASH_RATE_MAX = 2;
+/** Sliding window for counting full flashes (ms). */
+export const FLASH_RATE_WINDOW_MS = 1000;
+/** Minimum gap between flash starts (ms). */
+export const FLASH_MIN_GAP_MS = 400;
+
+/** @type {number[]} recent flash start timestamps (ms) */
+let flashStartTimestamps = [];
+
+/**
+ * Reset the shared flash rate-limit window (tests / long-running pages).
+ */
+export function resetFlashRateLimit() {
+  flashStartTimestamps = [];
+}
+
+/**
+ * Whether a new full flash may start now without exceeding the rate limit.
+ * @param {number} [now=Date.now()]
+ * @returns {boolean}
+ */
+export function canStartFlash(now = Date.now()) {
+  const t = Number(now);
+  const at = Number.isFinite(t) ? t : Date.now();
+  flashStartTimestamps = flashStartTimestamps.filter(
+    (ts) => at - ts < FLASH_RATE_WINDOW_MS
+  );
+  if (flashStartTimestamps.length >= FLASH_RATE_MAX) return false;
+  const last = flashStartTimestamps[flashStartTimestamps.length - 1];
+  if (last != null && at - last < FLASH_MIN_GAP_MS) return false;
+  return true;
+}
+
+/**
+ * Record a flash start for the shared rate limiter (call only when a flash actually begins).
+ * @param {number} [now=Date.now()]
+ */
+export function noteFlashStart(now = Date.now()) {
+  const t = Number(now);
+  const at = Number.isFinite(t) ? t : Date.now();
+  flashStartTimestamps = flashStartTimestamps.filter(
+    (ts) => at - ts < FLASH_RATE_WINDOW_MS
+  );
+  flashStartTimestamps.push(at);
+}
+
+/**
  * Reuse / replace a single viewport flash overlay (never stack multiple flashes).
  */
 function ensureSharedFlashOverlay() {
@@ -235,6 +286,7 @@ function ensureSharedFlashOverlay() {
  * Briefly flash the viewport with a solid overlay color.
  * Overlapping calls reuse one overlay: the previous Promise is resolved
  * immediately so `await flashScreen()` never hangs.
+ * Rate-limited for photosensitivity (max ~2 full flashes / 1s; shared with alertCombo).
  * When `color` is omitted, picks contrast via {@link contrastFlashColor}.
  * @param {object} [opts]
  * @param {string} [opts.color]
@@ -264,6 +316,12 @@ export function flashScreen(opts = {}) {
       return;
     }
 
+    // Shared photosensitivity cooldown (also covers alertCombo → flashScreen)
+    if (!canStartFlash()) {
+      resolve();
+      return;
+    }
+
     // Settle any in-flight flash before clearing timers / reusing overlay
     sharedFlashResolve = settleFlashResolve(sharedFlashResolve);
     clearSharedFlashTimers();
@@ -274,6 +332,7 @@ export function flashScreen(opts = {}) {
       return;
     }
 
+    noteFlashStart();
     sharedFlashResolve = resolve;
     el.style.background = color;
     el.style.opacity = String(opacity);
@@ -667,6 +726,7 @@ export function pulseBorder(target, opts = {}) {
  * Combined alert: optional flash + banner + vibrate (with shake fallback).
  * When `flashColor` is omitted: level `urgent` ALWAYS flashes red `#e53935`;
  * other levels use auto contrast (white on dark, dark on light).
+ * Flash uses the shared photosensitivity rate limit in {@link flashScreen}.
  * Passes `reduceMotion` through to flash / shake.
  * @param {string} message Banner text
  * @param {object} [opts]
