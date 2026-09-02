@@ -79,3 +79,26 @@ describe("signals pure helpers", () => {
     assert.equal(color, "#ffffff");
   });
 });
+
+import {
+  isListenSupported,
+  getInputLevel,
+  DEFAULT_LOUD_THRESHOLD,
+  DEFAULT_MIN_INTERVAL_MS,
+} from "../src/listen.js";
+
+describe("listen helpers", () => {
+  it("exports a high default RMS threshold", () => {
+    assert.equal(typeof DEFAULT_LOUD_THRESHOLD, "number");
+    assert.ok(DEFAULT_LOUD_THRESHOLD >= 0.4);
+    assert.ok(DEFAULT_LOUD_THRESHOLD <= 1);
+    assert.equal(DEFAULT_MIN_INTERVAL_MS, 2500);
+  });
+
+  it("isListenSupported is false in Node; getInputLevel null when idle", () => {
+    assert.equal(typeof isListenSupported(), "boolean");
+    assert.equal(isListenSupported(), false);
+    assert.equal(getInputLevel(), null);
+  });
+});
+

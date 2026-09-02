@@ -55,4 +55,5 @@ Or load `../src/index.js` from the demo page as shown in `examples/demo.html`.
 - Keep changes focused and small.
 - Prefer accessibility-friendly defaults (`role="alert"`, high contrast).
 - Keep demo i18n **LT + EN** in sync if changing UI strings.
-- Do not add sound-based APIs - this library is intentionally silent.
+- Do not add APIs that *play* sound — this library is intentionally silent (optional mic **loud**-level listen as *input* is OK).
+- Optional mic loud listen (`src/listen.js`) uses a high RMS threshold by design; keep defaults strong and document overrides.

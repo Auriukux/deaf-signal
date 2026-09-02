@@ -158,6 +158,8 @@ await runAlert("horn", { message: "Horn nearby!" });
 | `isNotificationSupported()` / `getNotifyPermission()` | Feature / permission helpers |
 | `getAlert(name)` | Look up a product alert preset (`call` / `message` / `door` / `siren` / `horn` / `urgent`) |
 | `runAlert(name, opts?)` | Run preset via `alertCombo` + optional `notifyAlert` when Notification permission is granted |
+| `isListenSupported()` / `getInputLevel()` | Feature helper / live RMS while listening |
+| `startLoudListen(opts?)` / `stopLoudListen()` | Optional mic **loud**-sound detect (Web Audio RMS); high threshold by default |
 
 `flashScreen`, `pulseBorder`, `shakeElement`, and `alertCombo` accept optional `reduceMotion: boolean`. When omitted, they follow the OS `prefers-reduced-motion: reduce` media query.
 
@@ -209,6 +211,23 @@ Existing `PATTERN_*` / `getPreset()` vibrate-only presets remain unchanged.
 `requestNotifyPermission()` + `notifyAlert(title, opts?)` use the browser **Notification** API (zero deps). When the document is hidden, the system notification (and notification `vibrate` where supported) is the main cue. When the tab is visible, `notifyAlert` also calls the existing flash / shake / combo helpers.
 
 Browsers only grant permission after a **user gesture**. True OS-level background delivery usually requires an **installed PWA** (and browser support) — a normal tab may pause or throttle when fully backgrounded. Missing Notification API → graceful no-ops for the notification part; visible visual cues still run.
+
+
+### Optional mic loud listen
+
+`startLoudListen(opts?)` is an **optional** helper: it asks for microphone permission, measures RMS via Web Audio (`AnalyserNode`, fftSize 2048), and fires only on **strong** peaks (default threshold **0.45** RMS, cooldown `minIntervalMs` 2500). It is **not** a sound classifier — no ML, no cloud — just a high bar so quiet rooms / soft speech should not trip. Intended cues: door slam, shout, siren nearby. Override `threshold` if needed. On exceed it can call `onLoud({ level, rms })` and/or auto `runAlert("urgent"|"siren")` (which may also `notifyAlert` when Notification permission is already granted). Always call `stopLoudListen()` / `controller.stop()` to release the mic. Requires a secure context (HTTPS / localhost).
+
+```js
+import { startLoudListen, stopLoudListen, DEFAULT_LOUD_THRESHOLD } from "deaf-signal";
+
+const ctrl = await startLoudListen({
+  threshold: DEFAULT_LOUD_THRESHOLD, // 0.45 — strong only
+  onLoud: ({ rms }) => console.log("loud", rms),
+  alert: "urgent",
+});
+// later:
+ctrl.stop();
+```
 
 ## Why
 

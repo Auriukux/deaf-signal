@@ -64,3 +64,18 @@ export type {
   RunAlertOptions,
   RunAlertResult,
 } from "./alerts.js";
+
+export {
+  startLoudListen,
+  stopLoudListen,
+  isListenSupported,
+  getInputLevel,
+  DEFAULT_LOUD_THRESHOLD,
+  DEFAULT_MIN_INTERVAL_MS,
+} from "./listen.js";
+export type {
+  LoudEvent,
+  StartLoudListenOptions,
+  LoudListenController,
+} from "./listen.js";
+
