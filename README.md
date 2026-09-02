@@ -5,6 +5,8 @@ A tiny ESM library for deaf / hard-of-hearing accessibility on the web.
 
 Flash the screen, show a high-contrast banner, vibrate when supported, or combine them — without relying on audio.
 
+**Live demo:** [https://auriukux.github.io/deaf-signal/](https://auriukux.github.io/deaf-signal/) ([examples/demo.html](https://auriukux.github.io/deaf-signal/examples/demo.html))
+
 Not sure which folder you should be in? This README is a map. Follow the numbered steps and you will always know the path.
 
 ## Install + Demo

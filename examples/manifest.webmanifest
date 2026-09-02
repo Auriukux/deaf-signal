@@ -2,27 +2,27 @@
   "name": "deaf-signal",
   "short_name": "deaf-signal",
   "description": "Visual and haptic web alerts — no sound. Accessibility for deaf / hard-of-hearing.",
-  "start_url": "/examples/demo.html",
-  "scope": "/examples/",
+  "start_url": "./demo.html",
+  "scope": "./",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#070b12",
   "theme_color": "#0c1220",
   "icons": [
     {
-      "src": "/examples/icons/icon-192.png",
+      "src": "./icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/examples/icons/icon-512.png",
+      "src": "./icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/examples/icons/icon-512.png",
+      "src": "./icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
