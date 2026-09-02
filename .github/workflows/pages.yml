@@ -31,7 +31,7 @@ jobs:
         run: |
           mkdir -p _site
           cp index.html serve.json _site/
-          cp -r examples src _site/
+          cp -r examples src demo _site/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
