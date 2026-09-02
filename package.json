@@ -9,7 +9,8 @@
     ".": "./src/index.js",
     "./signals": "./src/signals.js",
     "./presets": "./src/presets.js",
-    "./notify": "./src/notify.js"
+    "./notify": "./src/notify.js",
+    "./alerts": "./src/alerts.js"
   },
   "files": [
     "src",

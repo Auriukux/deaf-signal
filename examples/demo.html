@@ -400,6 +400,14 @@
       <button type="button" id="btn-notify-test" class="warn" data-i18n="btnNotifyTest"></button>
     </div>
 
+    <p class="lead" style="margin-top:22px;margin-bottom:10px" data-i18n="productLead"></p>
+    <div class="card" id="product-alerts">
+      <button type="button" id="btn-alert-call" class="secondary" data-i18n="btnAlertCall"></button>
+      <button type="button" id="btn-alert-door" class="warn" data-i18n="btnAlertDoor"></button>
+      <button type="button" id="btn-alert-horn" class="urgent" data-i18n="btnAlertHorn"></button>
+      <button type="button" id="btn-alert-siren" class="urgent" data-i18n="btnAlertSiren"></button>
+    </div>
+
     <button type="button" id="btn-install" data-i18n="btnInstall" hidden></button>
 
     <div class="status">
@@ -418,6 +426,7 @@
       notifyAlert,
       getNotifyPermission,
       isNotificationSupported,
+      runAlert,
     } from "../src/index.js";
 
     const LANG_KEY = "deaf-signal-demo-lang";
@@ -451,6 +460,15 @@
         notifyBody: "Foninis įspėjimas — perjunkite skirtuką ir patikrinkite.",
         notifySent: "Po ~2.5 s — įspėjimas. Perjunkite skirtuką, kad pamatytumėte foninį pranešimą.",
         btnInstall: "Įdiegti programėlę",
+        productLead: "Produkto įspėjimai (sirena / signalas / durys / skambutis) — vizualu + haptic, be mikrofono / ML:",
+        btnAlertCall: "Skambutis (ALERT_CALL)",
+        btnAlertDoor: "Durys (ALERT_DOOR)",
+        btnAlertHorn: "Signalas / horn (ALERT_HORN)",
+        btnAlertSiren: "Sirena (ALERT_SIREN)",
+        alertCallMsg: "Įeinantis skambutis",
+        alertDoorMsg: "Durys / skambutis į duris",
+        alertHornMsg: "Signalas / transporto įspėjimas",
+        alertSirenMsg: "Netoliese sirena",
       },
       en: {
         title: "deaf-signal — demo",
@@ -480,6 +498,15 @@
         notifyBody: "Background alert — switch tabs to verify.",
         notifySent: "Alert in ~2.5s — switch tabs to see the background notification.",
         btnInstall: "Install app",
+        productLead: "Product alerts (siren / horn / door / call) — visual + haptic, no mic / ML:",
+        btnAlertCall: "Call (ALERT_CALL)",
+        btnAlertDoor: "Door (ALERT_DOOR)",
+        btnAlertHorn: "Horn (ALERT_HORN)",
+        btnAlertSiren: "Siren (ALERT_SIREN)",
+        alertCallMsg: "Incoming call",
+        alertDoorMsg: "Door / doorbell",
+        alertHornMsg: "Horn / vehicle alert",
+        alertSirenMsg: "Siren detected nearby",
       },
     };
 
@@ -587,6 +614,27 @@
         combo: true,
         shakeTarget: document.querySelector(".card"),
       });
+    });
+
+    function productAlert(name, msgKey) {
+      const t = strings[lang];
+      return runAlert(name, {
+        message: t[msgKey],
+        shakeTarget: document.querySelector("#product-alerts") || document.querySelector(".card"),
+      });
+    }
+
+    document.getElementById("btn-alert-call").addEventListener("click", () => {
+      productAlert("call", "alertCallMsg");
+    });
+    document.getElementById("btn-alert-door").addEventListener("click", () => {
+      productAlert("door", "alertDoorMsg");
+    });
+    document.getElementById("btn-alert-horn").addEventListener("click", () => {
+      productAlert("horn", "alertHornMsg");
+    });
+    document.getElementById("btn-alert-siren").addEventListener("click", () => {
+      productAlert("siren", "alertSirenMsg");
     });
 
     // PWA: service worker + optional install prompt
