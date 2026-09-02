@@ -445,6 +445,7 @@
     </div>
 
     <p class="lead" data-i18n="lead"></p>
+    <p class="hint" style="margin-top:-4px;margin-bottom:14px" data-i18n="photoWarn"></p>
 
     <div class="card">
       <button type="button" id="btn-flash" data-i18n="btnFlash"></button>
@@ -517,6 +518,8 @@
         badge: "a11y",
         lead:
           "Vizualūs ir haptic (vibracijos) įspėjimai be garso — prieinamumas kurtiesiems ir neprigirdintiems.",
+        photoWarn:
+          "Įspėjimas: ekrano mirksėjimas gali sukelti fotosensityvią reakciją / epilepsiją — mirksiai ribojami.",
         btnFlash: "Mirksėti ekraną",
         btnBanner: "Rodyti juostą",
         btnVibrate: "Vibruoti / drebėti",
@@ -524,7 +527,7 @@
         btnPulse: "Pulsuoti rėmelį",
         statusLabel: "Pastaba",
         hint:
-          "Vibracija arba vizualus drebėjimas — vibracija veikia daugelyje mobiliųjų Chrome / Android; darbalaukyje dažnai naudojamas vizualus drebėjimas. Foniniams pranešimams reikia Notification leidimo; tikras OS fonas dažnai reikalauja įdiegtos PWA. Importas: <code>../src/index.js</code>",
+          "Vibracija arba vizualus drebėjimas — vibracija veikia daugelyje mobiliųjų Chrome / Android; iPhone Safari <code>navigator.vibrate</code> neveikia (tik vizualus drebėjimas). Mirksėjimas ribojamas (fotosensityvumas / epilepsija). Foniniams pranešimams reikia Notification leidimo; tikras OS fonas dažnai reikalauja įdiegtos PWA. Importas: <code>../src/index.js</code>",
         banner: "⚠️ Dėmesio: svarbus pranešimas.",
         combo: "Skubus įspėjimas — patikrinkite pranešimą!",
         vibrateFail: "Vibracija ir drebėjimas nepalaikomi šiame kontekste.",
@@ -539,25 +542,25 @@
         notifyBody: "Foninis įspėjimas — perjunkite skirtuką ir patikrinkite.",
         notifySent: "Po ~2.5 s — įspėjimas. Perjunkite skirtuką, kad pamatytumėte foninį pranešimą.",
         btnInstall: "Įdiegti programėlę",
-        productLead: "Produkto įspėjimai (sirena / signalas / durys / skambutis) — vizualu + vibracija, be mikrofono ir mašininio mokymosi:",
+        productLead: "Rankiniai produkto signalai (sirena / kornas / durys / skambutis) — jūs paleidžiate; ne atpažinimas. Vizualu + vibracija, be ML:",
         btnAlertCall: "Skambutis",
         btnAlertDoor: "Durys",
         btnAlertHorn: "Signalas/Kornas",
         btnAlertSiren: "Sirena",
         alertCallMsg: "Įeinantis skambutis",
         alertDoorMsg: "Durys / skambutis į duris",
-        alertHornMsg: "Signalas / transporto įspėjimas",
-        listenLead: "Mikrofono garsumo pikas / loudPeak (atskirai nuo produkto įspėjimų) — tik garsumas, ne sirena/durys:",
+        alertHornMsg: "Garsus signalas",
+        listenLead: "Mikrofonas: tik garsumo pikas (loudPeak) — ne sirenos atpažinimas; atskirai nuo rankinių produkto signalų:",
         btnListenStart: "Įjungti klausymą",
         btnListenStop: "Stabdyti",
         listenLevelLabel: "Lygis",
         listenIdle: "Laukia…",
-        listenListening: "Klauso — tik stipraus garsumo pikų įspėjimas (ne sirena).",
+        listenListening: "Klauso — tik garsumo pikas (ne sirenos atpažinimas).",
         listenFired: "Stipraus garsumo pikas!",
         listenDenied: "Mikrofono leidimas atmestas arba nepalaikomas.",
         listenUnsupported: "Mikrofono klausymas nepalaikomas šiame kontekste (reikia HTTPS / localhost).",
         listenHint: "RMS matuoja garsumą, ne įvykio tipą — suveikia tik stiprūs garsumo pikiai; šnabždesys neturėtų paleisti.",
-        alertSirenMsg: "Netoliese sirena",
+        alertSirenMsg: "Skubus signalas",
         close: "Uždaryti",
       },
       en: {
@@ -566,6 +569,8 @@
         badge: "a11y",
         lead:
           "Visual and haptic alerts without relying on sound — accessibility for deaf / hard-of-hearing.",
+        photoWarn:
+          "Warning: screen flashes can affect people with photosensitive epilepsy — flashes are rate-limited.",
         btnFlash: "Flash screen",
         btnBanner: "Show banner",
         btnVibrate: "Vibrate / shake",
@@ -573,7 +578,7 @@
         btnPulse: "Pulse border",
         statusLabel: "Hint",
         hint:
-          "Vibration or visual shake — vibration works on many mobile Chrome / Android devices; desktop often uses visual shake. Background alerts need Notification permission; true OS background usually needs an installed PWA. Import: <code>../src/index.js</code>",
+          "Vibration or visual shake — works on many Chrome / Android devices; iPhone Safari <code>navigator.vibrate</code> does not (visual shake only). Flashes are rate-limited (photosensitive epilepsy warning). Background alerts need Notification permission; true OS background usually needs an installed PWA. Import: <code>../src/index.js</code>",
         banner: "⚠️ Attention: important notice.",
         combo: "Urgent alert — check the message!",
         vibrateFail: "Vibration and shake are not supported in this context.",
@@ -588,25 +593,25 @@
         notifyBody: "Background alert — switch tabs to verify.",
         notifySent: "Alert in ~2.5s — switch tabs to see the background notification.",
         btnInstall: "Install app",
-        productLead: "Product alerts (siren / horn / door / call) — visual + haptic, no mic / ML:",
+        productLead: "Manual product cues (siren / horn / door / call) — you trigger them; not classifiers. Visual + haptic, no ML:",
         btnAlertCall: "Call",
         btnAlertDoor: "Door",
         btnAlertHorn: "Horn",
         btnAlertSiren: "Siren",
         alertCallMsg: "Incoming call",
         alertDoorMsg: "Door / doorbell",
-        alertHornMsg: "Horn / vehicle alert",
-        listenLead: "Mic loudPeak (separate from product alerts) — loudness only, not siren/door:",
+        alertHornMsg: "Loud alert cue",
+        listenLead: "Mic: loudness peak only — not siren recognition; separate from manual product cues:",
         btnListenStart: "Start listening",
         btnListenStop: "Stop",
         listenLevelLabel: "Level",
         listenIdle: "Idle…",
-        listenListening: "Listening — strong loudness peaks only (not a siren detector).",
+        listenListening: "Listening — loudness peak only (not siren recognition).",
         listenFired: "Strong loudness peak!",
         listenDenied: "Microphone permission denied or unsupported.",
         listenUnsupported: "Mic listen is not supported here (needs HTTPS / localhost).",
         listenHint: "RMS measures loudness, not event type — only strong loudness peaks fire; whispering should not.",
-        alertSirenMsg: "Siren detected nearby",
+        alertSirenMsg: "Urgent alert",
         close: "Close",
       },
     };

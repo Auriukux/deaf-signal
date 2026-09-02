@@ -73,8 +73,8 @@ const PRODUCT_EVENT_ALERT_NAMES = new Set([
 /**
  * Resolve auto-alert name for {@link startLoudListen}.
  * Default is `"urgent"` (neutral loudPeak cue). Pass `false` for callback-only.
- * Product event names (`siren` / `door` / `horn` / …) are remapped to `"urgent"` —
- * RMS loudness is not a classifier; use product alert buttons / `runAlert` separately.
+ * Product event names (`siren` / `door` / `horn` / …) and **unknown** names are
+ * remapped to `"urgent"` (fail-closed). RMS loudness is not a classifier.
  * @param {"urgent"|false|string|undefined|null} alert
  * @returns {string|null} Alert name, or `null` when alerts are disabled
  */
@@ -82,10 +82,14 @@ export function resolveLoudAlertName(alert) {
   if (alert === false) return null;
   if (alert == null) return DEFAULT_LOUD_ALERT;
   const name = String(alert).toLowerCase();
+  // Known neutral cue
+  if (name === DEFAULT_LOUD_ALERT) return DEFAULT_LOUD_ALERT;
+  // Product classifier names AND any unknown string → fail-closed to urgent
+  // (mic RMS is loudPeak only — never invent / silently wire a custom preset)
   if (PRODUCT_EVENT_ALERT_NAMES.has(name)) {
     return DEFAULT_LOUD_ALERT;
   }
-  return String(alert);
+  return DEFAULT_LOUD_ALERT;
 }
 
 /**
@@ -316,7 +320,7 @@ export async function startLoudListen(opts = {}) {
     if (opts.notify === true && getNotifyPermission() === "granted" && !alertName) {
       try {
         await notifyAlert("Loud sound", {
-          body: "Strong loudness peak detected nearby.",
+          body: "Strong loudness peak (loudness only — not siren recognition).",
           level: "urgent",
           tag: "deaf-signal-loud",
           flash: false,

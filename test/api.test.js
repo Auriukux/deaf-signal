@@ -32,6 +32,12 @@ import {
   SHAKE_AMPLITUDE_MAX,
   settleFlashResolve,
   defaultBannerCloseLabel,
+  FLASH_RATE_MAX,
+  FLASH_RATE_WINDOW_MS,
+  FLASH_MIN_GAP_MS,
+  resetFlashRateLimit,
+  canStartFlash,
+  noteFlashStart,
 } from "../src/signals.js";
 
 import { resolveNotifyIcon } from "../src/notify.js";
@@ -106,15 +112,35 @@ describe("alerts / getAlert", () => {
     assert.ok(ALERT_HORN.durationMs > ALERT_MESSAGE.durationMs);
   });
 
+  it("ALERT_SIREN / ALERT_HORN use presentation copy (not detection)", () => {
+    assert.equal(ALERT_SIREN.message, "Urgent alert");
+    assert.equal(ALERT_HORN.message, "Loud alert cue");
+    assert.match(ALERT_SIREN.body, /presentation/i);
+    assert.match(ALERT_HORN.body, /presentation/i);
+    assert.doesNotMatch(ALERT_SIREN.message, /detect/i);
+    assert.doesNotMatch(ALERT_HORN.message, /detect/i);
+  });
+
   it("runAlert returns preset (combo no-ops without DOM) and wires known names", async () => {
     const r = await runAlert("siren");
     assert.equal(r.alert, ALERT_SIREN);
     assert.ok(r.combo);
     assert.equal(r.notification, null);
+  });
 
-    const miss = await runAlert("nope");
-    assert.equal(miss.alert, null);
-    assert.equal(miss.combo, null);
+  it("runAlert unknown name returns false and console.warn (fail-closed)", async () => {
+    const warnings = [];
+    const prev = console.warn;
+    console.warn = (...args) => {
+      warnings.push(args.map(String).join(" "));
+    };
+    try {
+      const miss = await runAlert("nope");
+      assert.equal(miss, false);
+      assert.ok(warnings.some((w) => /unknown alert/i.test(w)));
+    } finally {
+      console.warn = prev;
+    }
   });
 });
 
@@ -154,6 +180,28 @@ describe("signals pure helpers", () => {
     assert.equal(settleFlashResolve(null), null);
     assert.equal(settleFlashResolve(undefined), null);
     assert.equal(called, 1);
+  });
+
+  it("flash rate-limit allows at most FLASH_RATE_MAX starts per window (WCAG-minded)", () => {
+    resetFlashRateLimit();
+    assert.equal(FLASH_RATE_MAX, 2);
+    assert.equal(FLASH_RATE_WINDOW_MS, 1000);
+    assert.equal(FLASH_MIN_GAP_MS, 400);
+    const t0 = 1_000_000;
+    assert.equal(canStartFlash(t0), true);
+    noteFlashStart(t0);
+    // Too soon for min gap
+    assert.equal(canStartFlash(t0 + 100), false);
+    // After min gap, second flash ok
+    assert.equal(canStartFlash(t0 + FLASH_MIN_GAP_MS), true);
+    noteFlashStart(t0 + FLASH_MIN_GAP_MS);
+    // Third within window blocked
+    assert.equal(canStartFlash(t0 + FLASH_MIN_GAP_MS + FLASH_MIN_GAP_MS), false);
+    // After window rolls past first flash, a new one may start
+    const later = t0 + FLASH_RATE_WINDOW_MS + FLASH_MIN_GAP_MS;
+    assert.equal(canStartFlash(later), true);
+    resetFlashRateLimit();
+    assert.equal(canStartFlash(later), true);
   });
 
   it("defaultBannerCloseLabel is Close without lt html lang (Node)", () => {
@@ -203,7 +251,7 @@ describe("listen helpers", () => {
     assert.equal(DEFAULT_LOUD_ALERT, "urgent");
   });
 
-  it("resolveLoudAlertName: default urgent, false skips, product events remapped", () => {
+  it("resolveLoudAlertName: default urgent, false skips, product/unknown fail-closed", () => {
     assert.equal(resolveLoudAlertName(undefined), "urgent");
     assert.equal(resolveLoudAlertName(null), "urgent");
     assert.equal(resolveLoudAlertName(false), null);
@@ -215,6 +263,9 @@ describe("listen helpers", () => {
     assert.equal(resolveLoudAlertName("call"), "urgent");
     assert.equal(resolveLoudAlertName("message"), "urgent");
     assert.equal(resolveLoudAlertName("SIREN"), "urgent");
+    // Unknown names fail-closed to urgent (no silent custom wiring)
+    assert.equal(resolveLoudAlertName("nope"), "urgent");
+    assert.equal(resolveLoudAlertName("custom-alert"), "urgent");
   });
 
   it("isListenSupported is false in Node; getInputLevel null when idle", () => {

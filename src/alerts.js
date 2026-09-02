@@ -78,8 +78,8 @@ export const ALERT_DOOR = {
 /** @type {AlertPreset} */
 export const ALERT_SIREN = {
   name: "siren",
-  message: "Siren detected nearby",
-  body: "Emergency vehicle or alarm — stay alert.",
+  message: "Urgent alert",
+  body: "Loud alert cue — presentation only, not detection.",
   level: "urgent",
   flashColor: "#e53935",
   vibratePattern: PATTERN_SIREN.slice(),
@@ -91,8 +91,8 @@ export const ALERT_SIREN = {
 /** @type {AlertPreset} */
 export const ALERT_HORN = {
   name: "horn",
-  message: "Horn / vehicle alert",
-  body: "Loud horn nearby — check surroundings.",
+  message: "Loud alert cue",
+  body: "Loud alert cue — presentation only, not detection.",
   level: "urgent",
   flashColor: "#ff7043",
   vibratePattern: PATTERN_HORN.slice(),
@@ -144,12 +144,18 @@ export function getAlert(name) {
  *
  * @param {"call"|"message"|"door"|"siren"|"horn"|"urgent"|string} name
  * @param {object} [opts]
- * @returns {Promise<{ alert: AlertPreset|null, combo: object|null, notification: object|null }>}
+ * @returns {Promise<false|{ alert: AlertPreset, combo: object, notification: object|null }>} `false` + console.warn for unknown names
  */
 export async function runAlert(name, opts = {}) {
   const preset = getAlert(name);
   if (!preset) {
-    return { alert: null, combo: null, notification: null };
+    const label = name == null ? String(name) : String(name);
+    if (typeof console !== "undefined" && typeof console.warn === "function") {
+      console.warn(
+        `[deaf-signal] runAlert: unknown alert name "${label}" — no-op (fail-closed).`
+      );
+    }
+    return false;
   }
 
   const message =

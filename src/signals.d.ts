@@ -24,6 +24,23 @@ export function settleFlashResolve(
 /** Default banner close aria-label from `<html lang>` (`lt*` → "Uždaryti"). */
 export function defaultBannerCloseLabel(): string;
 
+/** Max full flashes allowed inside the sliding window (WCAG-minded: < 3/s). */
+export const FLASH_RATE_MAX: 2;
+/** Sliding window for flash rate limiting (ms). */
+export const FLASH_RATE_WINDOW_MS: 1000;
+/** Minimum gap between flash starts (ms). */
+export const FLASH_MIN_GAP_MS: 400;
+
+/** Reset the shared flash rate-limit window (tests). */
+export function resetFlashRateLimit(): void;
+
+/** Whether a new full flash may start without exceeding the rate limit. */
+export function canStartFlash(now?: number): boolean;
+
+/** Record a flash start for the shared rate limiter. */
+export function noteFlashStart(now?: number): void;
+
+
 export interface FlashScreenOptions {
   /** Overlay background color (auto contrast when omitted) */
   color?: string | null;
@@ -117,6 +134,7 @@ export function isVibrateSupported(): boolean;
  * Briefly flash the viewport with a solid overlay color.
  * When `color` is omitted, picks contrast via {@link contrastFlashColor}.
  * Overlapping calls reuse one overlay and immediately resolve the prior Promise.
+ * Rate-limited for photosensitivity (shared with alertCombo).
  */
 export function flashScreen(opts?: FlashScreenOptions): Promise<void>;
 
