@@ -51,6 +51,7 @@ Or load `../src/index.js` from the demo page as shown in `examples/demo.html`.
 
 ## Pull requests
 
+- CI runs on push/PR to main; keep the Node test suite green.
 - Keep changes focused and small.
 - Prefer accessibility-friendly defaults (`role="alert"`, high contrast).
 - Keep demo i18n **LT + EN** in sync if changing UI strings.
