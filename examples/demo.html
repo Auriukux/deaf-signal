@@ -547,17 +547,18 @@
         alertCallMsg: "Įeinantis skambutis",
         alertDoorMsg: "Durys / skambutis į duris",
         alertHornMsg: "Signalas / transporto įspėjimas",
-        listenLead: "Mikrofono garsus garsas (nebūtina) — tik stiprus slenkstis, ne klasifikatorius:",
+        listenLead: "Mikrofono garsumo pikas (nebūtina) — tik stiprus garsumas, ne klasifikatorius:",
         btnListenStart: "Įjungti klausymą",
         btnListenStop: "Stabdyti",
         listenLevelLabel: "Lygis",
         listenIdle: "Laukia…",
-        listenListening: "Klauso — tik stiprūs garsai paleidžia įspėjimą.",
-        listenFired: "Aptiktas stiprus garsas!",
+        listenListening: "Klauso — tik stipraus garsumo pikų įspėjimas (ne sirena).",
+        listenFired: "Stipraus garsumo pikas!",
         listenDenied: "Mikrofono leidimas atmestas arba nepalaikomas.",
         listenUnsupported: "Mikrofono klausymas nepalaikomas šiame kontekste (reikia HTTPS / localhost).",
-        listenHint: "Suveikia tik stiprūs garsai (dūris, šauksmas, sirena šalia) — šnabždesys neturėtų paleisti.",
+        listenHint: "RMS matuoja garsumą, ne įvykio tipą — suveikia tik stiprūs garsumo pikiai; šnabždesys neturėtų paleisti.",
         alertSirenMsg: "Netoliese sirena",
+        close: "Uždaryti",
       },
       en: {
         title: "deaf-signal — demo",
@@ -595,17 +596,18 @@
         alertCallMsg: "Incoming call",
         alertDoorMsg: "Door / doorbell",
         alertHornMsg: "Horn / vehicle alert",
-        listenLead: "Mic loud sound (optional) — strong threshold only, not a classifier:",
+        listenLead: "Mic loudness peak (optional) — strong loudness only, not a classifier:",
         btnListenStart: "Start listening",
         btnListenStop: "Stop",
         listenLevelLabel: "Level",
         listenIdle: "Idle…",
-        listenListening: "Listening — only strong sounds trigger an alert.",
-        listenFired: "Strong sound detected!",
+        listenListening: "Listening — strong loudness peaks only (not a siren detector).",
+        listenFired: "Strong loudness peak!",
         listenDenied: "Microphone permission denied or unsupported.",
         listenUnsupported: "Mic listen is not supported here (needs HTTPS / localhost).",
-        listenHint: "Only strong sounds trigger (door slam, shout, siren nearby) — whispering should not.",
+        listenHint: "RMS measures loudness, not event type — only strong loudness peaks fire; whispering should not.",
         alertSirenMsg: "Siren detected nearby",
+        close: "Close",
       },
     };
 
@@ -614,6 +616,13 @@
       localStorage.getItem(LANG_KEY) === "lt"
         ? localStorage.getItem(LANG_KEY)
         : "lt";
+
+    function demoBanner(message, opts = {}) {
+      return showBanner(message, {
+        closeLabel: strings[lang].close,
+        ...opts,
+      });
+    }
 
     function applyLang(next) {
       lang = next === "en" ? "en" : "lt";
@@ -641,7 +650,7 @@
     });
 
     document.getElementById("btn-banner").addEventListener("click", () => {
-      showBanner(strings[lang].banner, {
+      demoBanner(strings[lang].banner, {
         level: "warn",
         durationMs: 4000,
       });
@@ -653,7 +662,7 @@
         shakeFallback: true,
       });
       if (!ok) {
-        showBanner(strings[lang].vibrateFail, {
+        demoBanner(strings[lang].vibrateFail, {
           level: "info",
           durationMs: 3500,
         });
@@ -664,6 +673,7 @@
       alertCombo(strings[lang].combo, {
         level: "urgent",
         shakeTarget: ".card",
+        closeLabel: strings[lang].close,
       });
     });
 
@@ -674,7 +684,7 @@
 
     document.getElementById("btn-notify-perm").addEventListener("click", async () => {
       if (!isNotificationSupported()) {
-        showBanner(strings[lang].notifyUnsupported, { level: "warn", durationMs: 4000 });
+        demoBanner(strings[lang].notifyUnsupported, { level: "warn", durationMs: 4000 });
         return;
       }
       const perm = await requestNotifyPermission();
@@ -688,19 +698,19 @@
         msg = perm === "unsupported" ? t.notifyUnsupported : t.notifyDenied;
         level = "warn";
       }
-      showBanner(msg, { level, durationMs: 4000 });
+      demoBanner(msg, { level, durationMs: 4000 });
     });
 
     document.getElementById("btn-notify-test").addEventListener("click", async () => {
       const t = strings[lang];
       if (!isNotificationSupported()) {
-        showBanner(t.notifyUnsupported, { level: "warn", durationMs: 3500 });
+        demoBanner(t.notifyUnsupported, { level: "warn", durationMs: 3500 });
       } else if (getNotifyPermission() === "denied") {
-        showBanner(t.notifyDenied, { level: "warn", durationMs: 3500 });
+        demoBanner(t.notifyDenied, { level: "warn", durationMs: 3500 });
       } else if (getNotifyPermission() === "default") {
-        showBanner(t.notifyDefault, { level: "info", durationMs: 3500 });
+        demoBanner(t.notifyDefault, { level: "info", durationMs: 3500 });
       } else {
-        showBanner(t.notifySent, { level: "info", durationMs: 2500 });
+        demoBanner(t.notifySent, { level: "info", durationMs: 2500 });
       }
       // Short delay so the user can switch tabs to exercise the background Notification path.
       await new Promise((r) => setTimeout(r, 2500));
@@ -719,7 +729,8 @@
       const t = strings[lang];
       return runAlert(name, {
         message: t[msgKey],
-        shakeTarget: document.querySelector("#product-alerts") || document.querySelector(".card"),
+        closeLabel: t.close,
+        shakeTarget: document.querySelector("#product-alerts") || document.querySelector("main") || document.body,
       });
     }
 
@@ -737,7 +748,7 @@
     });
 
 
-    // Optional mic loud-sound listen (strong RMS threshold)
+    // Optional mic loudness-peak listen (strong RMS — not a siren classifier)
     const listenFill = document.getElementById("listen-meter-fill");
     const listenThresholdMark = document.getElementById("listen-meter-threshold");
     const listenReadout = document.getElementById("listen-level-readout");
@@ -770,7 +781,7 @@
     document.getElementById("btn-listen-start").addEventListener("click", async () => {
       if (!isListenSupported()) {
         setListenStatus("listenUnsupported", false);
-        showBanner(strings[lang].listenUnsupported, { level: "warn", durationMs: 4000 });
+        demoBanner(strings[lang].listenUnsupported, { level: "warn", durationMs: 4000 });
         return;
       }
       try {
@@ -780,8 +791,9 @@
           minIntervalMs: 2500,
           alert: "urgent",
           alertOpts: {
-            shakeTarget: document.querySelector("#loud-listen") || document.querySelector(".card"),
+            shakeTarget: document.querySelector("#loud-listen") || document.querySelector("main") || document.body,
             message: strings[lang].listenFired,
+            closeLabel: strings[lang].close,
           },
           onLevel: (rms) => updateListenMeter(rms),
           onLoud: () => {
@@ -800,7 +812,7 @@
             ? "listenDenied"
             : "listenUnsupported";
         setListenStatus(key, false);
-        showBanner(strings[lang][key], { level: "warn", durationMs: 4000 });
+        demoBanner(strings[lang][key], { level: "warn", durationMs: 4000 });
       }
     });
 

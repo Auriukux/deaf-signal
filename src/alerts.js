@@ -35,6 +35,7 @@ const PATTERN_HORN = [450, 150, 450, 150, 600];
  * @property {string} [flashColor] Explicit flash color
  * @property {number[]} vibratePattern
  * @property {{ durationMs?: number, amplitudePx?: number }} [shake]
+ * @property {number} [durationMs] Banner auto-dismiss (ms); siren/horn longer
  * @property {boolean} [requireInteraction]
  */
 
@@ -47,6 +48,7 @@ export const ALERT_CALL = {
   flashColor: "#42a5f5",
   vibratePattern: PATTERN_CALL.slice(),
   shake: { durationMs: 550, amplitudePx: 16 },
+  durationMs: 3500,
 };
 
 /** @type {AlertPreset} */
@@ -58,6 +60,7 @@ export const ALERT_MESSAGE = {
   flashColor: "#66bb6a",
   vibratePattern: PATTERN_MESSAGE.slice(),
   shake: { durationMs: 400, amplitudePx: 14 },
+  durationMs: 3000,
 };
 
 /** @type {AlertPreset} */
@@ -69,6 +72,7 @@ export const ALERT_DOOR = {
   flashColor: "#ffa726",
   vibratePattern: PATTERN_DOOR.slice(),
   shake: { durationMs: 600, amplitudePx: 16 },
+  durationMs: 4000,
 };
 
 /** @type {AlertPreset} */
@@ -80,6 +84,7 @@ export const ALERT_SIREN = {
   flashColor: "#e53935",
   vibratePattern: PATTERN_SIREN.slice(),
   shake: { durationMs: 700, amplitudePx: 18 },
+  durationMs: 6000,
   requireInteraction: true,
 };
 
@@ -92,6 +97,7 @@ export const ALERT_HORN = {
   flashColor: "#ff7043",
   vibratePattern: PATTERN_HORN.slice(),
   shake: { durationMs: 650, amplitudePx: 17 },
+  durationMs: 5500,
   requireInteraction: true,
 };
 
@@ -104,6 +110,7 @@ export const ALERT_URGENT = {
   flashColor: "#e53935",
   vibratePattern: PATTERN_URGENT.slice(),
   shake: { durationMs: 650, amplitudePx: 18 },
+  durationMs: 4500,
   requireInteraction: true,
 };
 
@@ -132,8 +139,8 @@ export function getAlert(name) {
  * when Notification permission is already granted.
  *
  * Overrides via `opts`: `message`, `body`, `level`, `flashColor`, `vibratePattern`,
- * `shakeTarget`, `shakeFallback`, `reduceMotion`, `notify` (force/disable notify),
- * plus any `alertCombo` flags (`flash`, `banner`, `vibrate`).
+ * `shake` / `shakeTarget` / `shakeFallback`, `durationMs`, `closeLabel`, `reduceMotion`,
+ * `notify` (force/disable notify), plus any `alertCombo` flags (`flash`, `banner`, `vibrate`).
  *
  * @param {"call"|"message"|"door"|"siren"|"horn"|"urgent"|string} name
  * @param {object} [opts]
@@ -156,6 +163,15 @@ export async function runAlert(name, opts = {}) {
       ? opts.vibratePattern
       : preset.vibratePattern.slice();
 
+  const shake =
+    opts.shake !== undefined
+      ? opts.shake
+      : preset.shake
+        ? { ...preset.shake }
+        : undefined;
+  const durationMs =
+    opts.durationMs != null ? opts.durationMs : preset.durationMs;
+
   const combo = await alertCombo(message, {
     flash: opts.flash !== false,
     banner: opts.banner !== false,
@@ -165,6 +181,9 @@ export async function runAlert(name, opts = {}) {
     vibratePattern,
     shakeFallback: opts.shakeFallback !== false,
     shakeTarget: opts.shakeTarget,
+    shake,
+    durationMs,
+    closeLabel: opts.closeLabel,
     reduceMotion: opts.reduceMotion,
   });
 

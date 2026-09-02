@@ -12,6 +12,9 @@ export {
   shakeElement,
   contrastFlashColor,
   isVibrateSupported,
+  clampShakeAmplitude,
+  SHAKE_AMPLITUDE_MIN,
+  SHAKE_AMPLITUDE_MAX,
 } from "./signals.js";
 export type {
   AlertLevel,
@@ -72,6 +75,8 @@ export {
   getInputLevel,
   DEFAULT_LOUD_THRESHOLD,
   DEFAULT_MIN_INTERVAL_MS,
+  DEFAULT_LOUD_ALERT,
+  resolveLoudAlertName,
 } from "./listen.js";
 export type {
   LoudEvent,

@@ -5,6 +5,14 @@
 
 export type AlertLevel = "info" | "warn" | "urgent";
 
+/** Min shake amplitude clamp (px). */
+export const SHAKE_AMPLITUDE_MIN: 2;
+/** Max shake amplitude clamp (px). */
+export const SHAKE_AMPLITUDE_MAX: 64;
+
+/** Clamp shake amplitude to 2–64 (default 16). */
+export function clampShakeAmplitude(amplitudePx?: unknown): number;
+
 export interface FlashScreenOptions {
   /** Overlay background color (auto contrast when omitted) */
   color?: string | null;
@@ -21,12 +29,14 @@ export interface ShowBannerOptions {
   level?: AlertLevel;
   /** Auto-dismiss delay; 0 = stay until closed (default 3000) */
   durationMs?: number;
+  /** Close button aria-label (default "Close") */
+  closeLabel?: string;
 }
 
 export interface ShakeElementOptions {
   /** Total shake duration in ms (default 550) */
   durationMs?: number;
-  /** Max horizontal offset in px (default 16; clamped ~14–18) */
+  /** Max horizontal offset in px (default 16; clamped 2–64) */
   amplitudePx?: number;
   /** Force skip/respect reduced motion */
   reduceMotion?: boolean;
@@ -39,6 +49,10 @@ export interface VibratePatternOptions {
   target?: Element | string | null;
   /** Passed through to shakeElement */
   reduceMotion?: boolean;
+  /** Shake duration (ms) */
+  durationMs?: number;
+  /** Shake amplitude (px) */
+  amplitudePx?: number;
 }
 
 export interface PulseBorderOptions {
@@ -64,6 +78,12 @@ export interface AlertComboOptions {
   /** Default true */
   shakeFallback?: boolean;
   shakeTarget?: Element | string | null;
+  /** Passed through to shakeElement via vibratePattern */
+  shake?: { durationMs?: number; amplitudePx?: number } | null;
+  /** Banner auto-dismiss delay (ms) */
+  durationMs?: number;
+  /** Banner close button aria-label */
+  closeLabel?: string;
   /** Force skip/respect reduced motion for flash/shake */
   reduceMotion?: boolean;
 }
