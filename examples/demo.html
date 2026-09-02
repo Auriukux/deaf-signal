@@ -26,7 +26,7 @@
       --btn-secondary-border: rgba(148, 173, 214, 0.22);
       --ring: #7dd3fc;
       --shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
-      --radius: 18px;
+      --radius: 8px;
       --ease: cubic-bezier(0.22, 1, 0.36, 1);
     }
 
@@ -61,7 +61,7 @@
     .brand-mark {
       width: 28px;
       height: 28px;
-      border-radius: 9px;
+      border-radius: 4px;
       background:
         linear-gradient(135deg, rgba(94, 200, 255, 0.95), rgba(99, 102, 241, 0.85));
       box-shadow:
@@ -71,15 +71,19 @@
       flex-shrink: 0;
     }
 
-    .brand-mark::after {
+    /* Minimal signal bars (no chevron) */
+    .brand-mark::before {
       content: "";
       position: absolute;
-      inset: 7px;
-      border-radius: 3px;
-      border: 2px solid rgba(7, 11, 18, 0.55);
-      border-top-color: transparent;
-      border-left-color: transparent;
-      transform: rotate(-45deg) translateY(-1px);
+      left: 7px;
+      bottom: 7px;
+      width: 3px;
+      height: 6px;
+      border-radius: 1px;
+      background: rgba(7, 11, 18, 0.65);
+      box-shadow:
+        5px -3px 0 0 rgba(7, 11, 18, 0.65),
+        10px -7px 0 0 rgba(7, 11, 18, 0.65);
     }
 
     .brand-word {
@@ -99,7 +103,7 @@
       background: var(--accent-soft);
       border: 1px solid rgba(94, 200, 255, 0.28);
       padding: 3px 7px;
-      border-radius: 999px;
+      border-radius: 4px;
     }
 
     .header {
@@ -130,7 +134,7 @@
       display: inline-flex;
       padding: 3px;
       border: 1px solid var(--glass-border);
-      border-radius: 999px;
+      border-radius: 6px;
       background: rgba(255, 255, 255, 0.04);
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
@@ -141,7 +145,7 @@
     .lang-toggle button {
       appearance: none;
       border: none;
-      border-radius: 999px;
+      border-radius: 4px;
       padding: 7px 13px;
       font-size: 0.78rem;
       font-weight: 720;
@@ -205,7 +209,7 @@
     .card > button {
       appearance: none;
       border: 1px solid transparent;
-      border-radius: 12px;
+      border-radius: 6px;
       padding: 14px 16px;
       font-size: 0.98rem;
       font-weight: 650;
@@ -283,7 +287,7 @@
     .status {
       margin-top: 18px;
       padding: 14px 16px;
-      border-radius: 14px;
+      border-radius: 8px;
       border: 1px solid var(--glass-border);
       background: rgba(255, 255, 255, 0.035);
       box-shadow: 0 1px 0 var(--glass-highlight) inset;
@@ -312,7 +316,7 @@
       background: rgba(0, 0, 0, 0.35);
       color: #d7e6ff;
       padding: 2px 6px;
-      border-radius: 6px;
+      border-radius: 3px;
       border: 1px solid rgba(148, 173, 214, 0.15);
     }
 
