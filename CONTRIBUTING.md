@@ -8,7 +8,7 @@ Thanks for helping improve **deaf-signal** — visual + haptic alerts with no so
 2. From the repo root:
 
 ```bash
-npx --yes serve examples
+npx --yes serve .
 ```
 
 Then open the printed local URL and try the buttons (flash, banner, vibrate, combo, pulse).

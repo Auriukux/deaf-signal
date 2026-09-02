@@ -1,7 +1,7 @@
 {
   "name": "deaf-signal",
   "version": "0.1.0",
-  "description": "Visual and haptic web alerts \u2014 no sound. Accessibility for deaf / hard-of-hearing.",
+  "description": "Visual and haptic web alerts — no sound. Accessibility for deaf / hard-of-hearing.",
   "type": "module",
   "main": "./src/index.js",
   "module": "./src/index.js",
@@ -17,7 +17,7 @@
     "README.md"
   ],
   "scripts": {
-    "demo": "npx --yes serve examples"
+    "demo": "npx --yes serve ."
   },
   "keywords": [
     "a11y",

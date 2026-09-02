@@ -79,7 +79,7 @@ vibratePattern(getPreset("urgent"));
 Open `examples/demo.html` in a browser. Prefer a local static server (ESM imports may be blocked from `file://`):
 
 ```bash
-npx --yes serve examples
+npx --yes serve .
 # or: npm run demo
 ```
 
