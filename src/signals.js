@@ -7,6 +7,21 @@ const DEFAULT_FLASH_MS = 400;
 const DEFAULT_BANNER_MS = 3000;
 const DEFAULT_SHAKE_MS = 550;
 
+/** Min/max shake amplitude (px) — honest API range. */
+export const SHAKE_AMPLITUDE_MIN = 2;
+export const SHAKE_AMPLITUDE_MAX = 64;
+
+/**
+ * Clamp shake amplitude to a reasonable range (default 16).
+ * @param {unknown} amplitudePx
+ * @returns {number}
+ */
+export function clampShakeAmplitude(amplitudePx) {
+  const n = Number(amplitudePx);
+  const v = Number.isFinite(n) ? n : 16;
+  return Math.max(SHAKE_AMPLITUDE_MIN, Math.min(SHAKE_AMPLITUDE_MAX, v));
+}
+
 /**
  * Whether the user (or caller) prefers reduced motion.
  * Explicit `reduceMotion` wins; otherwise checks `prefers-reduced-motion`.
@@ -174,6 +189,47 @@ export function isVibrateSupported() {
  * @param {boolean} [opts.reduceMotion] Force skip/respect reduced motion (default: OS preference)
  * @returns {Promise<void>}
  */
+/** @type {HTMLElement|null} */
+let sharedFlashOverlay = null;
+/** @type {number|null} */
+let sharedFlashHideTimer = null;
+/** @type {number|null} */
+let sharedFlashRemoveTimer = null;
+
+function clearSharedFlashTimers() {
+  if (sharedFlashHideTimer != null) {
+    clearTimeout(sharedFlashHideTimer);
+    sharedFlashHideTimer = null;
+  }
+  if (sharedFlashRemoveTimer != null) {
+    clearTimeout(sharedFlashRemoveTimer);
+    sharedFlashRemoveTimer = null;
+  }
+}
+
+/**
+ * Reuse / replace a single viewport flash overlay (never stack multiple flashes).
+ */
+function ensureSharedFlashOverlay() {
+  if (typeof document === "undefined") return null;
+  if (sharedFlashOverlay && sharedFlashOverlay.isConnected) {
+    return sharedFlashOverlay;
+  }
+  const el = document.createElement("div");
+  el.id = "deaf-signal-flash";
+  el.setAttribute("aria-hidden", "true");
+  Object.assign(el.style, {
+    position: "fixed",
+    inset: "0",
+    pointerEvents: "none",
+    zIndex: "2147483646",
+    transition: "opacity 120ms ease-out",
+  });
+  document.body.appendChild(el);
+  sharedFlashOverlay = el;
+  return el;
+}
+
 export function flashScreen(opts = {}) {
   const {
     durationMs = DEFAULT_FLASH_MS,
@@ -194,22 +250,22 @@ export function flashScreen(opts = {}) {
       resolve();
       return;
     }
-    const el = document.createElement("div");
-    el.setAttribute("aria-hidden", "true");
-    Object.assign(el.style, {
-      position: "fixed",
-      inset: "0",
-      background: color,
-      opacity: String(opacity),
-      pointerEvents: "none",
-      zIndex: "2147483646",
-      transition: "opacity 120ms ease-out",
-    });
-    document.body.appendChild(el);
-    window.setTimeout(() => {
+    clearSharedFlashTimers();
+    const el = ensureSharedFlashOverlay();
+    if (!el) {
+      resolve();
+      return;
+    }
+    el.style.background = color;
+    el.style.opacity = String(opacity);
+    el.style.transition = "opacity 120ms ease-out";
+    sharedFlashHideTimer = window.setTimeout(() => {
       el.style.opacity = "0";
-      window.setTimeout(() => {
-        el.remove();
+      sharedFlashRemoveTimer = window.setTimeout(() => {
+        if (sharedFlashOverlay === el) {
+          el.remove();
+          sharedFlashOverlay = null;
+        }
         resolve();
       }, 140);
     }, durationMs);
@@ -225,7 +281,11 @@ export function flashScreen(opts = {}) {
  * @returns {Promise<HTMLElement|null>} The banner element (null without document)
  */
 export function showBanner(message, opts = {}) {
-  const { level = "info", durationMs = DEFAULT_BANNER_MS } = opts;
+  const {
+    level = "info",
+    durationMs = DEFAULT_BANNER_MS,
+    closeLabel = "Close",
+  } = opts;
 
   const palette = {
     info: { bg: "#1565c0", fg: "#ffffff" },
@@ -245,8 +305,8 @@ export function showBanner(message, opts = {}) {
 
     const banner = document.createElement("div");
     banner.id = "deaf-signal-banner";
+    // role=alert implies assertive live region — do not also set aria-live
     banner.setAttribute("role", "alert");
-    banner.setAttribute("aria-live", "assertive");
     Object.assign(banner.style, {
       position: "fixed",
       top: "0",
@@ -267,7 +327,7 @@ export function showBanner(message, opts = {}) {
 
     const close = document.createElement("button");
     close.type = "button";
-    close.setAttribute("aria-label", "Close");
+    close.setAttribute("aria-label", String(closeLabel || "Close"));
     close.textContent = "×";
     Object.assign(close.style, {
       position: "absolute",
@@ -327,7 +387,7 @@ function ensureShakeKeyframes() {
  * @param {Element|string} target Element or CSS selector
  * @param {object} [opts]
  * @param {number} [opts.durationMs=550] Total shake duration (~500–600ms)
- * @param {number} [opts.amplitudePx=16] Max horizontal offset in px (±14–18 recommended)
+ * @param {number} [opts.amplitudePx=16] Max horizontal offset in px (clamped 2–64)
  * @param {boolean} [opts.reduceMotion] Force skip/respect reduced motion
  * @returns {Promise<boolean>} true if a visual cue ran
  */
@@ -384,7 +444,7 @@ export function shakeElement(target, opts = {}) {
     }
 
     ensureShakeKeyframes();
-    const amp = Math.max(14, Math.min(18, Number(amplitudePx) || 16));
+    const amp = clampShakeAmplitude(amplitudePx);
     el.style.setProperty("--deaf-shake-amp", `${amp}px`);
     el.style.willChange = "transform";
     el.style.transition = "none";
@@ -445,10 +505,18 @@ export function shakeElement(target, opts = {}) {
  * @param {boolean} [opts.shakeFallback=true] Always run visual shake (in addition to vibrate)
  * @param {Element|string} [opts.target] Shake target (default: main, then body)
  * @param {boolean} [opts.reduceMotion] Passed through to shakeElement
+ * @param {number} [opts.durationMs] Shake duration (ms)
+ * @param {number} [opts.amplitudePx] Shake amplitude (px)
  * @returns {boolean} true if vibrate was attempted OR shake fallback was started
  */
 export function vibratePattern(pattern = [200, 100, 200], opts = {}) {
-  const { shakeFallback = true, target, reduceMotion: reduceMotionOpt } = opts;
+  const {
+    shakeFallback = true,
+    target,
+    reduceMotion: reduceMotionOpt,
+    durationMs: shakeDurationMs,
+    amplitudePx: shakeAmplitudePx,
+  } = opts;
 
   let vibrated = false;
   if (isVibrateSupported()) {
@@ -477,7 +545,10 @@ export function vibratePattern(pattern = [200, 100, 200], opts = {}) {
   }
 
   // Always shake when fallback is on — desktop vibrate is often a no-op.
-  shakeElement(shakeTarget, { reduceMotion: reduceMotionOpt });
+  const shakeOpts = { reduceMotion: reduceMotionOpt };
+  if (shakeDurationMs != null) shakeOpts.durationMs = shakeDurationMs;
+  if (shakeAmplitudePx != null) shakeOpts.amplitudePx = shakeAmplitudePx;
+  shakeElement(shakeTarget, shakeOpts);
   return true;
 }
 
@@ -568,6 +639,9 @@ export function pulseBorder(target, opts = {}) {
  * @param {number|number[]} [opts.vibratePattern]
  * @param {boolean} [opts.shakeFallback=true]
  * @param {Element|string} [opts.shakeTarget]
+ * @param {{ durationMs?: number, amplitudePx?: number }} [opts.shake] Passed to shakeElement
+ * @param {number} [opts.durationMs] Banner auto-dismiss delay
+ * @param {string} [opts.closeLabel] Banner close button aria-label
  * @param {boolean} [opts.reduceMotion] Force skip/respect reduced motion for flash/shake
  * @returns {Promise<{banner: HTMLElement|null, vibrated: boolean}>}
  */
@@ -581,6 +655,9 @@ export async function alertCombo(message, opts = {}) {
     vibratePattern: vPattern = [200, 80, 200, 80, 400],
     shakeFallback = true,
     shakeTarget,
+    shake,
+    durationMs,
+    closeLabel,
     reduceMotion: reduceMotionOpt,
   } = opts;
 
@@ -600,16 +677,22 @@ export async function alertCombo(message, opts = {}) {
 
   let bannerEl = null;
   if (banner) {
-    bannerEl = await showBanner(message, { level });
+    const bannerOpts = { level };
+    if (durationMs != null) bannerOpts.durationMs = durationMs;
+    if (closeLabel != null) bannerOpts.closeLabel = closeLabel;
+    bannerEl = await showBanner(message, bannerOpts);
   }
 
   let vibrated = false;
   if (vibrate) {
-    vibrated = vibratePattern(vPattern, {
+    const vibOpts = {
       shakeFallback,
       target: shakeTarget,
       reduceMotion: reduceMotionOpt,
-    });
+    };
+    if (shake && shake.durationMs != null) vibOpts.durationMs = shake.durationMs;
+    if (shake && shake.amplitudePx != null) vibOpts.amplitudePx = shake.amplitudePx;
+    vibrated = vibratePattern(vPattern, vibOpts);
   }
 
   await Promise.all(tasks);

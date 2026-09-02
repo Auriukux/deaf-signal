@@ -23,6 +23,8 @@ export interface AlertPreset {
   flashColor?: string;
   vibratePattern: number[];
   shake?: AlertShakeOptions;
+  /** Banner auto-dismiss delay (ms); siren/horn longer */
+  durationMs?: number;
   requireInteraction?: boolean;
 }
 
@@ -58,6 +60,12 @@ export interface RunAlertOptions
   level?: AlertLevel | string;
   flashColor?: string | null;
   vibratePattern?: number | number[];
+  /** Override preset shake opts passed to shakeElement */
+  shake?: AlertShakeOptions | null;
+  /** Banner duration override */
+  durationMs?: number;
+  /** Banner close button aria-label */
+  closeLabel?: string;
   /** Force/disable notify (default: notify when permission already granted) */
   notify?: boolean;
   tag?: string;

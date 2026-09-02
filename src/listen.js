@@ -1,7 +1,7 @@
 /**
  * Optional microphone loud-sound detection (Web Audio only — no ML / cloud).
- * High RMS threshold by design: quiet rooms and soft speech should NOT fire;
- * intended for door slam / shout / nearby siren-level peaks.
+ * High RMS threshold by design: quiet rooms and soft speech should NOT fire.
+ * RMS loudness ≠ siren / door / horn classification — peaks only, not event type.
  * @module deaf-signal/listen
  */
 
@@ -9,20 +9,30 @@ import { runAlert } from "./alerts.js";
 import { getNotifyPermission, notifyAlert } from "./notify.js";
 
 /**
- * Default RMS threshold (0–1). Tuned high so ambient noise / whispering
- * does not trip; override via `threshold` when you need a lower bar.
+ * Default RMS threshold (0–1). Tuned so ambient noise / whispering
+ * does not trip; override via `threshold` when you need a lower/higher bar.
  * @type {number}
  */
-export const DEFAULT_LOUD_THRESHOLD = 0.35;
+export const DEFAULT_LOUD_THRESHOLD = 0.25;
 
 /** Default cooldown between loud triggers (ms). */
 export const DEFAULT_MIN_INTERVAL_MS = 2500;
+
+/** Default product alert when loud peak fires (`false` via opts.alert to skip). */
+export const DEFAULT_LOUD_ALERT = "urgent";
 
 /** Approx. sample interval for level checks (ms). */
 const SAMPLE_INTERVAL_MS = 80;
 
 /** @type {LoudListenController|null} */
 let activeController = null;
+
+/** Generation token so a second start aborts an in-flight first start. */
+let listenGeneration = 0;
+
+/** Tracks from an in-flight getUserMedia that has not yet become active. */
+/** @type {MediaStream|null} */
+let pendingStream = null;
 
 /**
  * @typedef {object} LoudEvent
@@ -36,7 +46,7 @@ let activeController = null;
  * @property {number} [minIntervalMs] Cooldown between fires; default 2500
  * @property {(ev: LoudEvent) => void} [onLoud] Called when threshold is exceeded
  * @property {(level: number) => void} [onLevel] Optional live meter callback (~50–100ms)
- * @property {"urgent"|"siren"|false|string} [alert] Auto `runAlert` name; default `"urgent"`; `false` to skip
+ * @property {"urgent"|"siren"|false|string} [alert] Auto `runAlert` name; default `"urgent"` (not siren — RMS ≠ classifier); `false` to skip
  * @property {boolean} [notify] If true and Notification already granted, also `notifyAlert` (in addition to runAlert’s own notify path when alert runs)
  * @property {object} [alertOpts] Extra opts forwarded to `runAlert`
  */
@@ -47,6 +57,18 @@ let activeController = null;
  * @property {() => number|null} getInputLevel Current RMS while running, else null
  * @property {boolean} active
  */
+
+/**
+ * Resolve auto-alert name for {@link startLoudListen}.
+ * Default is `"urgent"` — do not pretend RMS peaks are a siren/door classifier.
+ * @param {"urgent"|"siren"|false|string|undefined|null} alert
+ * @returns {string|null} Alert name, or `null` when alerts are disabled
+ */
+export function resolveLoudAlertName(alert) {
+  if (alert === false) return null;
+  if (alert != null) return String(alert);
+  return DEFAULT_LOUD_ALERT;
+}
 
 /**
  * @returns {boolean} Whether getUserMedia + AudioContext are available
@@ -72,9 +94,22 @@ export function getInputLevel() {
 }
 
 /**
- * Stop the active loud-listen session (if any).
+ * Stop pending getUserMedia tracks (in-flight start) if any.
+ */
+function stopPendingStream() {
+  if (!pendingStream) return;
+  try {
+    pendingStream.getTracks().forEach((t) => t.stop());
+  } catch (_) {}
+  pendingStream = null;
+}
+
+/**
+ * Stop the active loud-listen session (if any) and abort in-flight starts.
  */
 export function stopLoudListen() {
+  listenGeneration += 1;
+  stopPendingStream();
   if (activeController) {
     activeController.stop();
   }
@@ -101,6 +136,12 @@ function computeRms(analyser, buffer) {
  * Start microphone loud-sound detection.
  * Requires a secure context (HTTPS / localhost) and mic permission.
  *
+ * A second call aborts any in-flight first start (generation token + stop
+ * pending tracks) before opening a new session.
+ *
+ * Default `alert` is `"urgent"` — RMS loudness peaks are **not** a siren/door
+ * classifier; pass `alert: false` + `onLoud` when you only want the callback.
+ *
  * @param {StartLoudListenOptions} [opts]
  * @returns {Promise<LoudListenController>}
  */
@@ -117,8 +158,12 @@ export async function startLoudListen(opts = {}) {
     );
   }
 
-  // Replace any existing session
-  stopLoudListen();
+  // Abort any in-flight start + replace any existing session
+  const myGen = ++listenGeneration;
+  stopPendingStream();
+  if (activeController) {
+    activeController.stop();
+  }
 
   const threshold =
     typeof opts.threshold === "number" && Number.isFinite(opts.threshold)
@@ -128,8 +173,7 @@ export async function startLoudListen(opts = {}) {
     typeof opts.minIntervalMs === "number" && opts.minIntervalMs >= 0
       ? opts.minIntervalMs
       : DEFAULT_MIN_INTERVAL_MS;
-  const alertName =
-    opts.alert === false ? null : opts.alert != null ? String(opts.alert) : "urgent";
+  const alertName = resolveLoudAlertName(opts.alert);
 
   let stream;
   try {
@@ -148,6 +192,16 @@ export async function startLoudListen(opts = {}) {
     throw e;
   }
 
+  // Race: a newer startLoudListen / stopLoudListen won while we awaited permission
+  if (myGen !== listenGeneration) {
+    try {
+      stream.getTracks().forEach((t) => t.stop());
+    } catch (_) {}
+    throw new Error("Loud listen start aborted (superseded by a newer start/stop).");
+  }
+
+  pendingStream = stream;
+
   const AC = window.AudioContext || window.webkitAudioContext;
   const audioContext = new AC();
   if (audioContext.state === "suspended") {
@@ -156,6 +210,17 @@ export async function startLoudListen(opts = {}) {
     } catch (_) {
       /* ignore */
     }
+  }
+
+  if (myGen !== listenGeneration) {
+    try {
+      stream.getTracks().forEach((t) => t.stop());
+    } catch (_) {}
+    try {
+      if (audioContext.state !== "closed") audioContext.close();
+    } catch (_) {}
+    if (pendingStream === stream) pendingStream = null;
+    throw new Error("Loud listen start aborted (superseded by a newer start/stop).");
   }
 
   const source = audioContext.createMediaStreamSource(stream);
@@ -197,6 +262,7 @@ export async function startLoudListen(opts = {}) {
         audioContext.close();
       }
     } catch (_) {}
+    if (pendingStream === stream) pendingStream = null;
     if (activeController === controller) {
       activeController = null;
     }
@@ -220,7 +286,6 @@ export async function startLoudListen(opts = {}) {
       try {
         await runAlert(alertName, {
           ...(opts.alertOpts || {}),
-          // Prefer existing notify path inside runAlert when already granted
         });
       } catch (_) {
         /* alert helpers should not break listen loop */
@@ -232,7 +297,7 @@ export async function startLoudListen(opts = {}) {
     if (opts.notify === true && getNotifyPermission() === "granted" && !alertName) {
       try {
         await notifyAlert("Loud sound", {
-          body: "Strong sound detected nearby.",
+          body: "Strong loudness peak detected nearby.",
           level: "urgent",
           tag: "deaf-signal-loud",
           flash: false,
@@ -258,7 +323,6 @@ export async function startLoudListen(opts = {}) {
     }
   }
 
-  // Prefer interval ~80ms; also kick with rAF for smoother first paint on meters
   timerId = setInterval(tick, SAMPLE_INTERVAL_MS);
   rafId = requestAnimationFrame(() => {
     rafId = null;
@@ -277,6 +341,7 @@ export async function startLoudListen(opts = {}) {
     },
   };
 
+  pendingStream = null;
   activeController = controller;
   return controller;
 }

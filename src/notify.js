@@ -178,7 +178,6 @@ async function runVisibleCues(title, opts) {
       shakeFallback: shake !== false,
       shakeTarget:
         shakeTarget ||
-        document.querySelector(".card") ||
         document.querySelector("main") ||
         document.body,
       reduceMotion,
@@ -198,7 +197,6 @@ async function runVisibleCues(title, opts) {
   if (shake) {
     const target =
       shakeTarget ||
-      document.querySelector(".card") ||
       document.querySelector("main") ||
       document.body;
     // vibratePattern also shakes when shakeFallback is on

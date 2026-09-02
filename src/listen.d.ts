@@ -1,15 +1,18 @@
 /**
  * Optional microphone loud-sound detection (Web Audio only — no ML / cloud).
- * High RMS threshold by design: quiet rooms and soft speech should NOT fire;
- * intended for door slam / shout / nearby siren-level peaks.
+ * High RMS threshold by design: quiet rooms and soft speech should NOT fire.
+ * RMS loudness ≠ siren / door / horn classification — peaks only, not event type.
  * @module deaf-signal/listen
  */
 
-/** Default RMS threshold (0–1). Strong sounds only. */
+/** Default RMS threshold (0–1). Strong loudness peaks only (0.25). */
 export const DEFAULT_LOUD_THRESHOLD: number;
 
 /** Default cooldown between loud triggers (ms). */
 export const DEFAULT_MIN_INTERVAL_MS: number;
+
+/** Default product alert when loud peak fires (`"urgent"`). */
+export const DEFAULT_LOUD_ALERT: "urgent";
 
 export interface LoudEvent {
   /** Same as rms (0–1), convenient for meters */
@@ -19,7 +22,7 @@ export interface LoudEvent {
 }
 
 export interface StartLoudListenOptions {
-  /** RMS 0–1; default DEFAULT_LOUD_THRESHOLD (high bar) */
+  /** RMS 0–1; default DEFAULT_LOUD_THRESHOLD (0.25) */
   threshold?: number;
   /** Cooldown between fires; default 2500 */
   minIntervalMs?: number;
@@ -28,8 +31,8 @@ export interface StartLoudListenOptions {
   /** Optional live meter callback (~50–100ms) */
   onLevel?: (level: number) => void;
   /**
-   * Auto `runAlert` name; default `"urgent"`.
-   * Pass `false` to skip product alerts.
+   * Auto `runAlert` name; default `"urgent"` (RMS ≠ siren classifier).
+   * Pass `false` to skip product alerts (use `onLoud` / `notify` instead).
    */
   alert?: "urgent" | "siren" | false | string;
   /**
@@ -49,18 +52,24 @@ export interface LoudListenController {
   active: boolean;
 }
 
+/** Resolve auto-alert name (`false` → null; default `"urgent"`). */
+export function resolveLoudAlertName(
+  alert?: StartLoudListenOptions["alert"] | null
+): string | null;
+
 /** @returns whether getUserMedia + AudioContext are available */
 export function isListenSupported(): boolean;
 
 /** Current input RMS while a listen session is active, else `null`. */
 export function getInputLevel(): number | null;
 
-/** Stop the active loud-listen session (if any). */
+/** Stop the active loud-listen session (if any) and abort in-flight starts. */
 export function stopLoudListen(): void;
 
 /**
  * Start microphone loud-sound detection.
  * Requires a secure context (HTTPS / localhost) and mic permission.
+ * A second call aborts any in-flight first start.
  */
 export function startLoudListen(
   opts?: StartLoudListenOptions
