@@ -215,16 +215,18 @@ Browsers only grant permission after a **user gesture**. True OS-level backgroun
 
 ### Optional mic loud listen
 
-`startLoudListen(opts?)` is an **optional** helper: it asks for microphone permission, measures RMS via Web Audio (`AnalyserNode`, fftSize 2048), and fires only on **strong loudness peaks** (default threshold **0.25** RMS, cooldown `minIntervalMs` 2500). It is **not** a sound classifier — no ML, no cloud — **RMS ≠ siren / door / horn detection**; it only measures loudness. Quiet rooms / soft speech should not trip. Override `threshold` if needed. On exceed it can call `onLoud({ level, rms })` and/or auto `runAlert` (default **`"urgent"`**, not siren; pass `alert: false` to skip). `runAlert` may also `notifyAlert` when Notification permission is already granted. A second `startLoudListen` aborts any in-flight first start. Always call `stopLoudListen()` / `controller.stop()` to release the mic. Requires a secure context (HTTPS / localhost).
+`startLoudListen(opts?)` is an **optional** helper, kept **separate from product alerts** (`ALERT_SIREN` / door / horn / call). It asks for microphone permission, measures RMS via Web Audio (`AnalyserNode`, fftSize 2048), and fires only on **strong loudness peaks / loudPeak** (default threshold **0.25** RMS, cooldown `minIntervalMs` 2500). It is **not** a sound classifier — no ML, no cloud — **RMS ≠ siren / door / horn**. Quiet rooms / soft speech should not trip. On exceed: `onLoud({ level, rms })` and/or a **neutral** auto `runAlert("urgent")` (default); pass `alert: false` for callback-only. Passing product event names (`siren`, `door`, …) is remapped to `"urgent"` — use the product preset buttons / `runAlert("siren")` for those cues. A second `startLoudListen` aborts any in-flight first start. Always call `stopLoudListen()` / `controller.stop()` to release the mic. Requires a secure context (HTTPS / localhost).
 
 ```js
 import { startLoudListen, stopLoudListen, DEFAULT_LOUD_THRESHOLD } from "deaf-signal";
 
 const ctrl = await startLoudListen({
-  threshold: DEFAULT_LOUD_THRESHOLD, // 0.25 — strong loudness peaks only
-  onLoud: ({ rms }) => console.log("loud peak", rms),
-  alert: "urgent", // default; RMS is not a siren classifier
+  threshold: DEFAULT_LOUD_THRESHOLD, // 0.25 — loudPeak only
+  onLoud: ({ rms }) => console.log("loudPeak", rms),
+  alert: "urgent", // neutral loudPeak cue — not ALERT_SIREN / door
+  // alert: false, // callback-only alternative
 });
+// Product presets stay separate: await runAlert("siren") from your own UI.
 // later:
 ctrl.stop();
 ```

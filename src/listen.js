@@ -46,7 +46,7 @@ let pendingStream = null;
  * @property {number} [minIntervalMs] Cooldown between fires; default 2500
  * @property {(ev: LoudEvent) => void} [onLoud] Called when threshold is exceeded
  * @property {(level: number) => void} [onLevel] Optional live meter callback (~50–100ms)
- * @property {"urgent"|"siren"|false|string} [alert] Auto `runAlert` name; default `"urgent"` (not siren — RMS ≠ classifier); `false` to skip
+ * @property {"urgent"|false|string} [alert] Auto `runAlert` name; default `"urgent"` (loudPeak / neutral). Product names (siren/door/…) remapped to urgent. `false` = callback-only
  * @property {boolean} [notify] If true and Notification already granted, also `notifyAlert` (in addition to runAlert’s own notify path when alert runs)
  * @property {object} [alertOpts] Extra opts forwarded to `runAlert`
  */
@@ -59,15 +59,33 @@ let pendingStream = null;
  */
 
 /**
+ * Product event presets that must NOT be auto-wired from mic RMS.
+ * Mic is loudPeak only (loudness) — never siren/door/horn/call/message classification.
+ */
+const PRODUCT_EVENT_ALERT_NAMES = new Set([
+  "siren",
+  "horn",
+  "door",
+  "call",
+  "message",
+]);
+
+/**
  * Resolve auto-alert name for {@link startLoudListen}.
- * Default is `"urgent"` — do not pretend RMS peaks are a siren/door classifier.
- * @param {"urgent"|"siren"|false|string|undefined|null} alert
+ * Default is `"urgent"` (neutral loudPeak cue). Pass `false` for callback-only.
+ * Product event names (`siren` / `door` / `horn` / …) are remapped to `"urgent"` —
+ * RMS loudness is not a classifier; use product alert buttons / `runAlert` separately.
+ * @param {"urgent"|false|string|undefined|null} alert
  * @returns {string|null} Alert name, or `null` when alerts are disabled
  */
 export function resolveLoudAlertName(alert) {
   if (alert === false) return null;
-  if (alert != null) return String(alert);
-  return DEFAULT_LOUD_ALERT;
+  if (alert == null) return DEFAULT_LOUD_ALERT;
+  const name = String(alert).toLowerCase();
+  if (PRODUCT_EVENT_ALERT_NAMES.has(name)) {
+    return DEFAULT_LOUD_ALERT;
+  }
+  return String(alert);
 }
 
 /**
@@ -139,8 +157,9 @@ function computeRms(analyser, buffer) {
  * A second call aborts any in-flight first start (generation token + stop
  * pending tracks) before opening a new session.
  *
- * Default `alert` is `"urgent"` — RMS loudness peaks are **not** a siren/door
- * classifier; pass `alert: false` + `onLoud` when you only want the callback.
+ * Default `alert` is `"urgent"` (neutral loudPeak). Mic stays separate from product
+ * alerts (`ALERT_SIREN` / door / horn) — those belong on product preset buttons /
+ * `runAlert` only. Pass `alert: false` + `onLoud` for callback-only.
  *
  * @param {StartLoudListenOptions} [opts]
  * @returns {Promise<LoudListenController>}

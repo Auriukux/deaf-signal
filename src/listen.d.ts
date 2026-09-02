@@ -31,10 +31,12 @@ export interface StartLoudListenOptions {
   /** Optional live meter callback (~50–100ms) */
   onLevel?: (level: number) => void;
   /**
-   * Auto `runAlert` name; default `"urgent"` (RMS ≠ siren classifier).
-   * Pass `false` to skip product alerts (use `onLoud` / `notify` instead).
+   * Auto `runAlert` name for a **loudPeak** cue; default `"urgent"` (neutral).
+   * Product event names (`siren` / `door` / `horn` / …) are remapped to `"urgent"` —
+   * mic RMS is not a classifier; wire those via product `runAlert` separately.
+   * Pass `false` for callback-only (`onLoud` / `notify`).
    */
-  alert?: "urgent" | "siren" | false | string;
+  alert?: "urgent" | false | string;
   /**
    * If true and Notification already granted, also notify when `alert` is false.
    * When `alert` runs, `runAlert` already notifies if permission is granted.
@@ -52,7 +54,7 @@ export interface LoudListenController {
   active: boolean;
 }
 
-/** Resolve auto-alert name (`false` → null; default `"urgent"`). */
+/** Resolve loudPeak alert name (`false` → null; default `"urgent"`; product event names → `"urgent"`). */
 export function resolveLoudAlertName(
   alert?: StartLoudListenOptions["alert"] | null
 ): string | null;
