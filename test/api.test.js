@@ -148,12 +148,18 @@ describe("listen helpers", () => {
     assert.equal(DEFAULT_LOUD_ALERT, "urgent");
   });
 
-  it("resolveLoudAlertName: default urgent, false skips, custom passes", () => {
+  it("resolveLoudAlertName: default urgent, false skips, product events remapped", () => {
     assert.equal(resolveLoudAlertName(undefined), "urgent");
     assert.equal(resolveLoudAlertName(null), "urgent");
     assert.equal(resolveLoudAlertName(false), null);
-    assert.equal(resolveLoudAlertName("siren"), "siren");
     assert.equal(resolveLoudAlertName("urgent"), "urgent");
+    // Mic must not wire to product classifier names
+    assert.equal(resolveLoudAlertName("siren"), "urgent");
+    assert.equal(resolveLoudAlertName("door"), "urgent");
+    assert.equal(resolveLoudAlertName("horn"), "urgent");
+    assert.equal(resolveLoudAlertName("call"), "urgent");
+    assert.equal(resolveLoudAlertName("message"), "urgent");
+    assert.equal(resolveLoudAlertName("SIREN"), "urgent");
   });
 
   it("isListenSupported is false in Node; getInputLevel null when idle", () => {

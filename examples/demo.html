@@ -547,7 +547,7 @@
         alertCallMsg: "Įeinantis skambutis",
         alertDoorMsg: "Durys / skambutis į duris",
         alertHornMsg: "Signalas / transporto įspėjimas",
-        listenLead: "Mikrofono garsumo pikas (nebūtina) — tik stiprus garsumas, ne klasifikatorius:",
+        listenLead: "Mikrofono garsumo pikas / loudPeak (atskirai nuo produkto įspėjimų) — tik garsumas, ne sirena/durys:",
         btnListenStart: "Įjungti klausymą",
         btnListenStop: "Stabdyti",
         listenLevelLabel: "Lygis",
@@ -596,7 +596,7 @@
         alertCallMsg: "Incoming call",
         alertDoorMsg: "Door / doorbell",
         alertHornMsg: "Horn / vehicle alert",
-        listenLead: "Mic loudness peak (optional) — strong loudness only, not a classifier:",
+        listenLead: "Mic loudPeak (separate from product alerts) — loudness only, not siren/door:",
         btnListenStart: "Start listening",
         btnListenStop: "Stop",
         listenLevelLabel: "Level",
@@ -789,6 +789,7 @@
         listenCtrl = await startLoudListen({
           threshold: DEFAULT_LOUD_THRESHOLD,
           minIntervalMs: 2500,
+          // loudPeak only — never wire mic to ALERT_SIREN / door / horn
           alert: "urgent",
           alertOpts: {
             shakeTarget: document.querySelector("#loud-listen") || document.querySelector("main") || document.body,
