@@ -40,7 +40,8 @@
     "README.md"
   ],
   "scripts": {
-    "demo": "npx --yes serve ."
+    "demo": "npx --yes serve .",
+    "test": "node --test test/*.test.js"
   },
   "keywords": [
     "a11y",
@@ -64,5 +65,5 @@
   "bugs": {
     "url": "https://github.com/Auriukux/deaf-signal/issues"
   },
-  "homepage": "https://github.com/Auriukux/deaf-signal#readme"
+  "homepage": "https://auriukux.github.io/deaf-signal/"
 }
