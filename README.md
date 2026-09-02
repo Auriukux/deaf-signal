@@ -8,10 +8,10 @@ Flash the screen, show a high-contrast banner, vibrate when supported, or combin
 ## Install
 
 ```bash
-npm install deaf-signal
+npm i github:Auriukux/deaf-signal
 ```
 
-Or copy `src/` into your project and import the modules directly.
+Optional: clone the repo or copy `src/` into your project and import the modules directly.
 
 ## Usage
 
