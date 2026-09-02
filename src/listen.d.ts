@@ -2,7 +2,8 @@
  * Optional microphone loud-sound detection (Web Audio only — no ML / cloud).
  * High RMS threshold by design: quiet rooms and soft speech should NOT fire.
  * RMS loudness ≠ siren / door / horn classification — peaks only, not event type.
- * Active sessions auto-stop on pagehide / visibility hidden / beforeunload (mic leak guard).
+ * Active sessions auto-stop on pagehide / beforeunload (and explicit stop()).
+ * Visibility hidden does NOT stop by default; pass `stopOnHidden: true` for old behavior.
  * @module deaf-signal/listen
  */
 
@@ -45,6 +46,13 @@ export interface StartLoudListenOptions {
   notify?: boolean;
   /** Extra opts forwarded to `runAlert` */
   alertOpts?: Record<string, unknown>;
+  /**
+   * If true, also stop when `visibilitychange` → hidden (old behavior).
+   * Default false — keep listening while the tab is backgrounded.
+   */
+  stopOnHidden?: boolean;
+  /** Called once when the session stops (explicit stop, unload, or stopOnHidden) */
+  onStop?: () => void;
 }
 
 export interface LoudListenController {
@@ -73,7 +81,7 @@ export function stopLoudListen(): void;
  * Start microphone loud-sound detection.
  * Requires a secure context (HTTPS / localhost) and mic permission.
  * A second call aborts any in-flight first start.
- * Auto-stops on pagehide / beforeunload / visibility hidden to release the mic.
+ * Auto-stops on pagehide / beforeunload (not on visibility hidden unless stopOnHidden).
  */
 export function startLoudListen(
   opts?: StartLoudListenOptions

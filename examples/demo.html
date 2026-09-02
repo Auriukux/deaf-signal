@@ -796,6 +796,8 @@
           minIntervalMs: 2500,
           // loudPeak only — never wire mic to ALERT_SIREN / door / horn
           alert: "urgent",
+          // Default: keep listening while tab is hidden; stop on unload / explicit stop
+          stopOnHidden: false,
           alertOpts: {
             shakeTarget: document.querySelector("#loud-listen") || document.querySelector("main") || document.body,
             message: strings[lang].listenFired,
@@ -807,6 +809,14 @@
             setTimeout(() => {
               if (listenCtrl && listenCtrl.active) setListenStatus("listenListening", false);
             }, 1800);
+          },
+          onStop: () => {
+            // Sync UI when session ends (unload / explicit stop / stopOnHidden)
+            if (listenCtrl && !listenCtrl.active) {
+              listenCtrl = null;
+              updateListenMeter(0);
+              setListenStatus("listenIdle", false);
+            }
           },
         });
         setListenStatus("listenListening", false);
@@ -827,6 +837,18 @@
       listenCtrl = null;
       updateListenMeter(0);
       setListenStatus("listenIdle", false);
+    });
+
+    // Keep status text aligned with controller.active (e.g. after unload auto-stop)
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState !== "visible") return;
+      if (listenCtrl && listenCtrl.active) {
+        setListenStatus("listenListening", false);
+      } else if (listenCtrl && !listenCtrl.active) {
+        listenCtrl = null;
+        updateListenMeter(0);
+        setListenStatus("listenIdle", false);
+      }
     });
 
     // PWA: service worker + optional install prompt
