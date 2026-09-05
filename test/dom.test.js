@@ -73,7 +73,10 @@ const {
   showBanner,
   shakeElement,
   pulseBorder,
+  vibratePattern,
   resetFlashRateLimit,
+  FLASH_DURATION_MAX,
+  clampFlashDuration,
 } = signals;
 const { notifyAlert } = notify;
 
@@ -227,3 +230,52 @@ describe("DOM: notifyAlert smoke", () => {
     assert.equal(constructed[0].title, "Granted alert");
   });
 });
+
+describe("DOM: flash duration cap + shake target a11y", () => {
+  it("clamps flash durationMs to FLASH_DURATION_MAX", async () => {
+    resetFlashRateLimit();
+    assert.equal(FLASH_DURATION_MAX, 800);
+    assert.equal(clampFlashDuration(5000), 800);
+    const start = Date.now();
+    // Use a value above the cap; overlay should still appear then clear
+    const p = flashScreen({ durationMs: 5000, color: "#00ff00", opacity: 0.5 });
+    assert.ok(document.getElementById("deaf-signal-flash"));
+    await p;
+    const elapsed = Date.now() - start;
+    // Cap is 800ms + fade (~140) — should finish well under 5s (allow slack for CI)
+    assert.ok(elapsed < 2500, `flash took too long: ${elapsed}ms`);
+    assert.equal(document.getElementById("deaf-signal-flash"), null);
+  });
+
+  it("vibratePattern without target does not shake body or main", () => {
+    const body = document.body;
+    const main = document.querySelector("main");
+    const prevBodyAnim = body.style.animation;
+    const prevMainAnim = main ? main.style.animation : "";
+    const ok = vibratePattern([50, 30, 50], { shakeFallback: true, durationMs: 20 });
+    // May be true if vibrate mocked; shake must not have started on body/main
+    assert.equal(body.style.animation, prevBodyAnim);
+    if (main) assert.equal(main.style.animation, prevMainAnim);
+    assert.equal(typeof ok, "boolean");
+  });
+
+  it("vibratePattern with explicit target shakes that element", async () => {
+    const el = document.getElementById("target");
+    assert.ok(el);
+    vibratePattern([40], {
+      shakeFallback: true,
+      target: el,
+      durationMs: 40,
+      amplitudePx: 10,
+    });
+    // Shake should have started (CSS animation or will-change)
+    await new Promise((r) => setTimeout(r, 10));
+    const started =
+      el.style.animation.includes("deaf-signal-shake") ||
+      el.style.willChange === "transform" ||
+      el.getAnimations?.().length > 0;
+    assert.ok(started, "expected shake to start on explicit target");
+    await new Promise((r) => setTimeout(r, 200));
+  });
+});
+

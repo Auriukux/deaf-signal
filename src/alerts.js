@@ -11,20 +11,14 @@ import {
   PATTERN_CALL,
   PATTERN_MESSAGE,
   PATTERN_URGENT,
+  PATTERN_DOOR,
+  PATTERN_SIREN,
+  PATTERN_HORN,
 } from "./presets.js";
-import {
-  notifyAlert,
-  getNotifyPermission,
-} from "./notify.js";
+import { notifyAlert } from "./notify.js";
 
-/** Long door-knock style pulse */
-const PATTERN_DOOR = [180, 100, 180, 100, 180, 280, 400];
-
-/** Rapid repeating siren-like pulse */
-const PATTERN_SIREN = [120, 60, 120, 60, 120, 60, 120, 60, 300];
-
-/** Sharp double-blast horn cue */
-const PATTERN_HORN = [450, 150, 450, 150, 600];
+// Re-export cue vibration patterns (not detectors / classifiers)
+export { PATTERN_DOOR, PATTERN_SIREN, PATTERN_HORN };
 
 /**
  * @typedef {object} AlertPreset
@@ -40,89 +34,89 @@ const PATTERN_HORN = [450, 150, 450, 150, 600];
  */
 
 /** @type {AlertPreset} */
-export const ALERT_CALL = {
+export const ALERT_CALL = Object.freeze({
   name: "call",
   message: "Incoming call",
   body: "Someone is calling — check your device.",
   level: "warn",
   flashColor: "#42a5f5",
-  vibratePattern: PATTERN_CALL.slice(),
-  shake: { durationMs: 550, amplitudePx: 16 },
+  vibratePattern: Object.freeze(PATTERN_CALL.slice()),
+  shake: Object.freeze({ durationMs: 550, amplitudePx: 16 }),
   durationMs: 3500,
-};
+});
 
 /** @type {AlertPreset} */
-export const ALERT_MESSAGE = {
+export const ALERT_MESSAGE = Object.freeze({
   name: "message",
   message: "New message",
   body: "You have a new message.",
   level: "info",
   flashColor: "#66bb6a",
-  vibratePattern: PATTERN_MESSAGE.slice(),
-  shake: { durationMs: 400, amplitudePx: 14 },
+  vibratePattern: Object.freeze(PATTERN_MESSAGE.slice()),
+  shake: Object.freeze({ durationMs: 400, amplitudePx: 14 }),
   durationMs: 3000,
-};
+});
 
 /** @type {AlertPreset} */
-export const ALERT_DOOR = {
+export const ALERT_DOOR = Object.freeze({
   name: "door",
   message: "Door / doorbell",
   body: "Someone is at the door.",
   level: "warn",
   flashColor: "#ffa726",
-  vibratePattern: PATTERN_DOOR.slice(),
-  shake: { durationMs: 600, amplitudePx: 16 },
+  vibratePattern: Object.freeze(PATTERN_DOOR.slice()),
+  shake: Object.freeze({ durationMs: 600, amplitudePx: 16 }),
   durationMs: 4000,
-};
+});
 
 /** @type {AlertPreset} */
-export const ALERT_SIREN = {
+export const ALERT_SIREN = Object.freeze({
   name: "siren",
   message: "Urgent alert",
   body: "Loud alert cue — presentation only, not detection.",
   level: "urgent",
   flashColor: "#e53935",
-  vibratePattern: PATTERN_SIREN.slice(),
-  shake: { durationMs: 700, amplitudePx: 18 },
+  vibratePattern: Object.freeze(PATTERN_SIREN.slice()),
+  shake: Object.freeze({ durationMs: 700, amplitudePx: 18 }),
   durationMs: 6000,
   requireInteraction: true,
-};
+});
 
 /** @type {AlertPreset} */
-export const ALERT_HORN = {
+export const ALERT_HORN = Object.freeze({
   name: "horn",
   message: "Loud alert cue",
   body: "Loud alert cue — presentation only, not detection.",
   level: "urgent",
   flashColor: "#ff7043",
-  vibratePattern: PATTERN_HORN.slice(),
-  shake: { durationMs: 650, amplitudePx: 17 },
+  vibratePattern: Object.freeze(PATTERN_HORN.slice()),
+  shake: Object.freeze({ durationMs: 650, amplitudePx: 17 }),
   durationMs: 5500,
   requireInteraction: true,
-};
+});
 
 /** @type {AlertPreset} */
-export const ALERT_URGENT = {
+export const ALERT_URGENT = Object.freeze({
   name: "urgent",
   message: "Urgent alert",
   body: "Immediate attention required.",
   level: "urgent",
   flashColor: "#e53935",
-  vibratePattern: PATTERN_URGENT.slice(),
-  shake: { durationMs: 650, amplitudePx: 18 },
+  vibratePattern: Object.freeze(PATTERN_URGENT.slice()),
+  shake: Object.freeze({ durationMs: 650, amplitudePx: 18 }),
   durationMs: 4500,
   requireInteraction: true,
-};
+});
 
-/** Map of preset name -> alert definition */
-export const ALERTS = {
+/** Map of preset name -> alert definition (frozen) */
+export const ALERTS = Object.freeze({
   call: ALERT_CALL,
   message: ALERT_MESSAGE,
   door: ALERT_DOOR,
   siren: ALERT_SIREN,
   horn: ALERT_HORN,
   urgent: ALERT_URGENT,
-};
+});
 
 /**
  * Look up a named product alert preset.
@@ -144,11 +138,14 @@ export function getAlert(name) {
 
 /**
  * Run a named product alert: {@link alertCombo} plus optional {@link notifyAlert}
- * when Notification permission is already granted.
+ * when the caller opts in with `{ notify: true }` (and Notification permission is granted).
+ *
+ * **Breaking (0.2):** `notify` defaults to `false`. Previously auto-notified when
+ * permission was already granted — pass `{ notify: true }` to restore that.
  *
  * Overrides via `opts`: `message`, `body`, `level`, `flashColor`, `vibratePattern`,
  * `shake` / `shakeTarget` / `shakeFallback`, `durationMs`, `closeLabel`, `reduceMotion`,
- * `notify` (force/disable notify), plus any `alertCombo` flags (`flash`, `banner`, `vibrate`).
+ * `notify` (opt-in), plus any `alertCombo` flags (`flash`, `banner`, `vibrate`).
  *
  * @param {"call"|"message"|"door"|"siren"|"horn"|"urgent"|string} name
  * @param {object} [opts]
@@ -202,9 +199,8 @@ export async function runAlert(name, opts = {}) {
   });
 
   let notification = null;
-  const wantNotify =
-    opts.notify === true ||
-    (opts.notify !== false && getNotifyPermission() === "granted");
+  // Opt-in only — default notify: false (breaking vs 0.1 auto-notify when granted)
+  const wantNotify = opts.notify === true;
 
   if (wantNotify) {
     // In-page cues already ran via alertCombo — ask notifyAlert for the

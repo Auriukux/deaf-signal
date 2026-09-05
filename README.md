@@ -11,7 +11,9 @@ Flash the screen, show a high-contrast banner, vibrate when supported, or combin
 
 > **iPhone / iOS Safari:** `navigator.vibrate` **does not work**. Users get **visual shake only**. True haptics need a native app or installed-app constraints — **not** the Vibration API.
 
-> **Photosensitivity:** full-viewport flashes are **rate-limited** (about max 2 full flashes / 1s, WCAG-minded to stay under 3 flashes/second). Screen flashing can affect people with photosensitive epilepsy — use reduce-motion and avoid rapid manual triggering.
+> **Photosensitivity:** full-viewport flashes are **rate-limited** (about max 2 full flashes / 1s, WCAG-minded to stay under 3 flashes/second) and **`durationMs` is capped at 800ms** (`FLASH_DURATION_MAX`). Screen flashing can affect people with photosensitive epilepsy — use reduce-motion and avoid rapid manual triggering.
+
+> **0.2 migration:** `startLoudListen` defaults to `alert: false`; `runAlert` defaults to `notify: false`; shake requires an explicit `target` / `shakeTarget` (no body/main default). See [CHANGELOG.md](CHANGELOG.md).
 
 ## Limits (honest)
 
@@ -115,7 +117,7 @@ await showBanner("Important update — check your messages.", {
 // (desktop vibrate often exists but does nothing)
 vibratePattern([200, 100, 200], { shakeFallback: true, target: ".card" });
 
-await alertCombo("Urgent alert!", { level: "urgent" });
+await alertCombo("Urgent alert!", { level: "urgent", shakeTarget: ".card" });
 
 // Skip / soften motion (also auto-detects prefers-reduced-motion)
 await flashScreen({ reduceMotion: true });
@@ -135,18 +137,18 @@ await notifyAlert("Incoming alert", {
 });
 
 // Product-level presentation presets (siren / horn / door / …)
-await runAlert("siren"); // presentation cue — not "siren detected"
-await runAlert("horn", { message: "Loud alert cue" });
+await runAlert("siren", { shakeTarget: ".card" }); // presentation cue — not "siren detected"
+await runAlert("horn", { message: "Loud alert cue", notify: true, shakeTarget: ".card" });
 ```
 
 ## API
 
 | Function | Description |
 | --- | --- |
-| `flashScreen(opts?)` | Full-viewport flash; auto contrast when `color` omitted; **rate-limited** for photosensitivity; skips when `reduceMotion` / `prefers-reduced-motion` |
+| `flashScreen(opts?)` | Full-viewport flash; auto contrast when `color` omitted; **rate-limited** for photosensitivity; **`durationMs` capped at 800ms**; skips when `reduceMotion` / `prefers-reduced-motion` (matchMedia errors → treat as reduce) |
 | `contrastFlashColor(root?)` | Helper: `#ffffff` on dark backgrounds, `#111111` on light |
 | `showBanner(message, opts?)` | Top banner with `role="alert"` |
-| `vibratePattern(pattern?, opts?)` | Calls `navigator.vibrate` when available; when `shakeFallback` is on (default `true`), **always** runs visual `shakeElement` too (desktop vibrate is often a no-op) |
+| `vibratePattern(pattern?, opts?)` | Calls `navigator.vibrate` when available; when `shakeFallback` is on (default `true`), runs visual `shakeElement` **only if `target` is set** (no body/main default — a11y) |
 | `shakeElement(target, opts?)` | Strong CSS / Web Animations shake (`deaf-signal-shake`, ~±16px + rotate); opacity pulse when reduced motion; cleans up after |
 | `isVibrateSupported()` | `true` when Vibration API is present |
 | `alertCombo(message, opts?)` | Flash + banner + vibrate/shake; urgent flash is always red `#e53935` when `flashColor` omitted (other levels use auto contrast) |
@@ -154,22 +156,29 @@ await runAlert("horn", { message: "Loud alert cue" });
 | `requestNotifyPermission()` | Request Notification permission (`granted` / `denied` / … / `unsupported`) |
 | `notifyAlert(title, opts?)` | System Notification when permitted (SW `showNotification` if controlling SW, else page `Notification`); **`silent: true` by default** (no OS sound; pass `false` to allow); when visible also flash / shake / combo |
 | `isNotificationSupported()` / `getNotifyPermission()` / `hasControllingServiceWorker()` | Feature / permission / SW helpers |
-| `runAlert(name, opts?)` | Run preset via `alertCombo` + optional `notifyAlert`; **unknown name → `false` + `console.warn`** (fail-closed) |
+| `runAlert(name, opts?)` | Run preset via `alertCombo` + optional `notifyAlert`; **`notify` defaults to `false`** (pass `true` to opt in); **unknown name → `false` + `console.warn`** (fail-closed) |
 | `isListenSupported()` / `getInputLevel()` | Feature helper / live RMS while listening |
-| `startLoudListen(opts?)` / `stopLoudListen()` | Optional mic **loud**-sound detect (Web Audio RMS); high threshold by default |
+| `startLoudListen(opts?)` / `stopLoudListen()` | Optional mic **loud**-sound detect (Web Audio RMS); high threshold; **`alert` defaults to `false`** (pass `"urgent"` to auto-`runAlert`) |
 
-`flashScreen`, `pulseBorder`, `shakeElement`, and `alertCombo` accept optional `reduceMotion: boolean`. When omitted, they follow the OS `prefers-reduced-motion: reduce` media query.
+`flashScreen`, `pulseBorder`, `shakeElement`, and `alertCombo` accept optional `reduceMotion: boolean`. When omitted, they follow the OS `prefers-reduced-motion: reduce` media query; if `matchMedia` **throws**, the library **prefers reduced motion** (fail-closed).
+
+**Shake target:** pass an explicit Element/selector (`vibratePattern({ target })`, `alertCombo` / `runAlert` / `notifyAlert` `{ shakeTarget }`). The library will **not** shake `document.body` or `main` by default — whole-page shake is disorienting for many users.
 
 ### Vibration presets
 
 Named patterns live in `src/presets.js` (also re-exported from the package root):
 
 | Export | Pattern (ms) | Typical use |
-| --- | --- |
-| `PATTERN_CALL` | `[300, 120, 300, 120, 300]` | Incoming call / ring cue |
-| `PATTERN_MESSAGE` | `[100, 80, 100]` | New message / notification |
-| `PATTERN_URGENT` | `[200, 80, 200, 80, 200, 80, 500]` | Urgent / alarm |
-| `PRESETS` / `getPreset(name)` | map / lookup (**`getPreset` returns a copy**) | `getPreset("call")` |
+| --- | --- | --- |
+| `PATTERN_CALL` | `[300, 120, 300, 120, 300]` | Incoming call / ring **cue** |
+| `PATTERN_MESSAGE` | `[100, 80, 100]` | New message / notification **cue** |
+| `PATTERN_URGENT` | `[200, 80, 200, 80, 200, 80, 500]` | Urgent / alarm **cue** |
+| `PATTERN_DOOR` | `[180, 100, 180, 100, 180, 280, 400]` | Door / knock **cue** (not detection) |
+| `PATTERN_SIREN` | `[120, 60, 120, 60, 120, 60, 120, 60, 300]` | Siren-like **cue** (not a classifier) |
+| `PATTERN_HORN` | `[450, 150, 450, 150, 600]` | Horn **cue** (not recognition) |
+| `PRESETS` / `getPreset(name)` | map / lookup (**frozen shared data**; **`getPreset` returns a mutable copy**) | `getPreset("door")` |
+
+`PATTERN_*` / `PRESETS` are **`Object.freeze`d**. Names like siren/door/horn are **vibration cue patterns**, not sound detectors — same idea as `ALERT_SIREN` (presentation only).
 
 ```js
 import { vibratePattern, PATTERN_MESSAGE, getPreset } from "deaf-signal";
@@ -202,7 +211,7 @@ console.log(r.alert.name, getAlert("horn").vibratePattern);
 await runAlert("call", { message: ALERT_DOOR.message }); // override freely
 ```
 
-Existing `PATTERN_*` / `getPreset()` vibrate-only presets remain unchanged.
+`ALERT_*` / `ALERTS` are frozen (nested `vibratePattern` + `shake` frozen). `getAlert` returns mutable copies. Door/siren/horn vibration arrays are also exported as `PATTERN_DOOR` / `PATTERN_SIREN` / `PATTERN_HORN`.
 
 ### Background notifications
 
@@ -220,7 +229,7 @@ Browsers only grant permission after a **user gesture**. True OS-level backgroun
 
 ### Optional mic loud listen
 
-`startLoudListen(opts?)` is an **optional** helper, kept **separate from product alerts** (`ALERT_SIREN` / door / horn / call). It asks for microphone permission, measures RMS via Web Audio (`AnalyserNode`, fftSize 2048), and fires only on **strong loudness peaks / loudPeak** (default threshold **0.25** RMS, cooldown `minIntervalMs` 2500). It is **not** a sound classifier — no ML, no cloud — **RMS ≠ siren / door / horn**. Quiet rooms / soft speech should not trip. On exceed: `onLoud({ level, rms })` and/or a **neutral** auto `runAlert("urgent")` (default); pass `alert: false` for callback-only. Product event names (`siren`, `door`, …) are remapped to `"urgent"`; **unknown** names skip the auto-alert entirely (no urgent fire) — use the product preset buttons / `runAlert("siren")` for those cues. A second `startLoudListen` aborts any in-flight first start. Always call `stopLoudListen()` / `controller.stop()` to release the mic; sessions also auto-stop on **page unload** (`pagehide` / `beforeunload`) so the mic is not left open. **Background-tab listening is best-effort only:** with default `stopOnHidden: false` the library *prefers* not to stop on `visibilitychange` → hidden, but browsers may still suspend `AudioContext` or throttle timers while the tab is hidden — this is a preference, not a contract. Pass `stopOnHidden: true` to auto-stop when the tab is hidden. Requires a secure context (HTTPS / localhost).
+`startLoudListen(opts?)` is an **optional** helper, kept **separate from product alerts** (`ALERT_SIREN` / door / horn / call). It asks for microphone permission, measures RMS via Web Audio (`AnalyserNode`, fftSize 2048), and fires only on **strong loudness peaks / loudPeak** (default threshold **0.25** RMS, cooldown `minIntervalMs` 2500). It is **not** a sound classifier — no ML, no cloud — **RMS ≠ siren / door / horn**. Quiet rooms / soft speech should not trip. On exceed: **`onLoud({ level, rms })` by default** (`alert` defaults to **`false`**); pass `alert: "urgent"` / `DEFAULT_LOUD_ALERT` to also auto-`runAlert`. Product event names (`siren`, `door`, …) are remapped to `"urgent"`; **unknown** names skip the auto-alert entirely (no urgent fire) — use the product preset buttons / `runAlert("siren")` for those cues. For Notification from loud listen, pass `alertOpts: { notify: true }` (runAlert notify is opt-in) or `notify: true` when alert is skipped. A second `startLoudListen` aborts any in-flight first start. Always call `stopLoudListen()` / `controller.stop()` to release the mic; sessions also auto-stop on **page unload** (`pagehide` / `beforeunload`) so the mic is not left open. **Background-tab listening is best-effort only:** with default `stopOnHidden: false` the library *prefers* not to stop on `visibilitychange` → hidden, but browsers may still suspend `AudioContext` or throttle timers while the tab is hidden — this is a preference, not a contract. Pass `stopOnHidden: true` to auto-stop when the tab is hidden. Requires a secure context (HTTPS / localhost).
 
 ```js
 import { startLoudListen, stopLoudListen, DEFAULT_LOUD_THRESHOLD } from "deaf-signal";
@@ -228,8 +237,8 @@ import { startLoudListen, stopLoudListen, DEFAULT_LOUD_THRESHOLD } from "deaf-si
 const ctrl = await startLoudListen({
   threshold: DEFAULT_LOUD_THRESHOLD, // 0.25 — loudPeak only
   onLoud: ({ rms }) => console.log("loudPeak", rms),
-  alert: "urgent", // neutral loudPeak cue — not ALERT_SIREN / door
-  // alert: false, // callback-only alternative
+  alert: "urgent", // opt-in neutral loudPeak cue (default is false / callback-only)
+  // alert: false, // default — onLoud only
 });
 // Product presets stay separate: await runAlert("siren") from your own UI.
 // later:

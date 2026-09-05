@@ -14,6 +14,15 @@ export const SHAKE_AMPLITUDE_MAX: 64;
 export function clampShakeAmplitude(amplitudePx?: unknown): number;
 
 /**
+ * Max flashScreen duration (ms) — a11y / photosensitivity cap.
+ * Longer `durationMs` values are clamped.
+ */
+export const FLASH_DURATION_MAX: 800;
+
+/** Clamp flash duration to 0…FLASH_DURATION_MAX (invalid → 400). */
+export function clampFlashDuration(durationMs?: unknown): number;
+
+/**
  * Immediately invoke a previous flashScreen resolve (if any).
  * Used so overlapping flashes never leave the first Promise hanging.
  */
@@ -53,7 +62,7 @@ export function noteFlashStart(now?: number): void;
 export interface FlashScreenOptions {
   /** Overlay background color (auto contrast when omitted) */
   color?: string | null;
-  /** How long the flash stays visible (default 400) */
+  /** How long the flash stays visible (default 400; clamped to FLASH_DURATION_MAX = 800) */
   durationMs?: number;
   /** Overlay opacity clamped to 0–1 (default 0.55) */
   opacity?: number;
@@ -82,7 +91,7 @@ export interface ShakeElementOptions {
 export interface VibratePatternOptions {
   /** Always run visual shake in addition to vibrate (default true) */
   shakeFallback?: boolean;
-  /** Shake target (default: main, then body) */
+  /** Required for visual shake — no body/main default */
   target?: Element | string | null;
   /** Passed through to shakeElement */
   reduceMotion?: boolean;
@@ -144,6 +153,7 @@ export function isVibrateSupported(): boolean;
  * When `color` is omitted, picks contrast via {@link contrastFlashColor}.
  * Overlapping calls reuse one overlay and immediately resolve the prior Promise.
  * Rate-limited for photosensitivity (shared with alertCombo).
+ * `durationMs` is clamped to {@link FLASH_DURATION_MAX} (800ms).
  */
 export function flashScreen(opts?: FlashScreenOptions): Promise<void>;
 
