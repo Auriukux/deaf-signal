@@ -70,5 +70,8 @@
     "url": "https://github.com/Auriukux/deaf-signal/issues"
   },
   "homepage": "https://auriukux.github.io/deaf-signal/",
-  "sideEffects": false
+  "sideEffects": false,
+  "devDependencies": {
+    "jsdom": "^26.1.0"
+  }
 }
