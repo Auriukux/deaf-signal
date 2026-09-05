@@ -20,6 +20,6 @@ export const PRESETS: Readonly<Record<PresetName, number[]>>;
 
 /**
  * Look up a named preset pattern.
- * @returns pattern array, or undefined when unknown
+ * @returns a copy of the pattern array, or undefined when unknown
  */
 export function getPreset(name: PresetName | string | null | undefined): number[] | undefined;

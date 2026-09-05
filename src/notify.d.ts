@@ -1,6 +1,7 @@
 /**
  * Permission-based Notification alerts with visual + haptic cues when the page is visible.
  * Prefers Service Worker showNotification when a controlling SW exists.
+ * Notifications default to silent: true (no OS sound); pass silent: false to allow sound.
  * @module deaf-signal/notify
  */
 
@@ -41,7 +42,10 @@ export interface NotifyAlertOptions {
   shakeTarget?: Element | string | null;
   /** Keep notification until dismissed */
   requireInteraction?: boolean;
-  /** Suppress notification sound/vibrate */
+  /**
+   * Notification `silent` option. **Default `true`** (no OS notification sound).
+   * Pass `false` to allow sound. The library itself never plays audio.
+   */
   silent?: boolean;
   /** Force show/hide Notification when visible (`undefined` = show if granted) */
   notification?: boolean;

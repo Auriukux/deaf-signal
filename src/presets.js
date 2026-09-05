@@ -27,5 +27,7 @@ export const PRESETS = {
  */
 export function getPreset(name) {
   if (name == null) return undefined;
-  return PRESETS[String(name).toLowerCase()];
+  const pattern = PRESETS[String(name).toLowerCase()];
+  // Return a copy so callers cannot mutate shared PATTERN_* arrays
+  return pattern ? pattern.slice() : undefined;
 }
