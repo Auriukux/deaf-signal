@@ -98,15 +98,22 @@ function parseCssColor(color) {
     };
   }
 
+  // Off-DOM: Canvas 2D fillStyle normalizes named / system colors without
+  // inserting a probe into document.body (avoids lasting nodes / MutationObserver noise).
   if (typeof document !== "undefined") {
     try {
-      const probe = document.createElement("div");
-      probe.style.color = c;
-      probe.style.display = "none";
-      document.body.appendChild(probe);
-      const computed = getComputedStyle(probe).color;
-      probe.remove();
-      if (computed && computed !== c) return parseCssColor(computed);
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext && canvas.getContext("2d");
+      if (ctx) {
+        const sentinel = "#abcdef";
+        ctx.fillStyle = sentinel;
+        ctx.fillStyle = c;
+        const computed = String(ctx.fillStyle || "");
+        // Invalid colors leave the previous fillStyle unchanged
+        if (computed && computed !== sentinel && computed !== c) {
+          return parseCssColor(computed);
+        }
+      }
     } catch {
       /* ignore */
     }
@@ -387,6 +394,20 @@ export function defaultBannerCloseLabel() {
  * @param {string} [opts.closeLabel] Close button aria-label (defaults via {@link defaultBannerCloseLabel})
  * @returns {Promise<HTMLElement|null>} The banner element (null without document)
  */
+/** @type {number|null} Auto-dismiss timer for the active banner (cleared on early close) */
+let bannerAutoDismissTimer = null;
+
+function clearBannerAutoDismissTimer() {
+  if (bannerAutoDismissTimer != null) {
+    try {
+      window.clearTimeout(bannerAutoDismissTimer);
+    } catch {
+      /* ignore */
+    }
+    bannerAutoDismissTimer = null;
+  }
+}
+
 export function showBanner(message, opts = {}) {
   const {
     level = "info",
@@ -407,6 +428,8 @@ export function showBanner(message, opts = {}) {
       return;
     }
 
+    // Replace prior banner and drop its auto-dismiss timer (no leak)
+    clearBannerAutoDismissTimer();
     const existing = document.getElementById("deaf-signal-banner");
     if (existing) existing.remove();
 
@@ -455,14 +478,17 @@ export function showBanner(message, opts = {}) {
       justifyContent: "center",
       boxSizing: "border-box",
     });
-    close.addEventListener("click", () => banner.remove());
+
+    const dismiss = () => {
+      clearBannerAutoDismissTimer();
+      if (banner.isConnected) banner.remove();
+    };
+    close.addEventListener("click", dismiss);
     banner.appendChild(close);
     document.body.appendChild(banner);
 
     if (durationMs > 0) {
-      window.setTimeout(() => {
-        if (banner.isConnected) banner.remove();
-      }, durationMs);
+      bannerAutoDismissTimer = window.setTimeout(dismiss, durationMs);
     }
     resolve(banner);
   });
@@ -471,6 +497,8 @@ export function showBanner(message, opts = {}) {
 const SHAKE_STYLE_ID = "deaf-signal-shake-style";
 /** @type {WeakMap<Element, () => void>} Abort prior shake on the same element */
 const activeShakeAbort = new WeakMap();
+/** @type {WeakMap<Element, () => void>} Abort prior pulseBorder on the same element */
+const activePulseAbort = new WeakMap();
 
 /**
  * Ensure the shared CSS @keyframes for visual shake are present once.
@@ -720,6 +748,7 @@ export function vibratePattern(pattern = [200, 100, 200], opts = {}) {
 /**
  * Pulse an element's border to draw visual attention.
  * Honors reduced motion by showing a brief static outline instead of pulsing.
+ * Starting a new pulse on the same element cancels/replaces any prior pulse (timers + outline).
  * @param {Element|string} target Element or CSS selector
  * @param {object} [opts]
  * @param {string} [opts.color="#ff9800"] Border / outline color
@@ -748,18 +777,56 @@ export function pulseBorder(target, opts = {}) {
       return;
     }
 
+    // Cancel/replace any in-flight pulse on this element (parity with shake WeakMap abort)
+    const prevAbort = activePulseAbort.get(el);
+    if (prevAbort) {
+      try {
+        prevAbort();
+      } catch {
+        /* ignore */
+      }
+      activePulseAbort.delete(el);
+    }
+
     const prevOutline = el.style.outline;
     const prevTransition = el.style.transition;
     const prevOffset = el.style.outlineOffset;
+    /** @type {number[]} */
+    const timers = [];
+
+    const cleanup = () => {
+      for (const id of timers) window.clearTimeout(id);
+      timers.length = 0;
+      el.style.outline = prevOutline;
+      el.style.transition = prevTransition;
+      el.style.outlineOffset = prevOffset;
+    };
+
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      if (activePulseAbort.get(el) === abort) {
+        activePulseAbort.delete(el);
+      }
+      cleanup();
+      resolve();
+    };
+
+    const abort = () => {
+      // Prior pulse replaced — restore styles and resolve
+      finish();
+    };
+    activePulseAbort.set(el, abort);
 
     if (shouldReduceMotion(reduceMotionOpt)) {
       el.style.outlineOffset = "2px";
       el.style.outline = `3px solid ${color}`;
-      window.setTimeout(() => {
-        el.style.outline = prevOutline;
-        el.style.outlineOffset = prevOffset;
-        resolve();
-      }, Math.min(400, durationMs));
+      timers.push(
+        window.setTimeout(() => {
+          finish();
+        }, Math.min(400, durationMs))
+      );
       return;
     }
 
@@ -771,19 +838,19 @@ export function pulseBorder(target, opts = {}) {
     const totalSteps = times * 2;
 
     const tick = () => {
+      if (done) return;
       const on = step % 2 === 0;
       el.style.outline = on ? `3px solid ${color}` : `3px solid transparent`;
       step += 1;
       if (step >= totalSteps) {
-        window.setTimeout(() => {
-          el.style.outline = prevOutline;
-          el.style.transition = prevTransition;
-          el.style.outlineOffset = prevOffset;
-          resolve();
-        }, stepMs);
+        timers.push(
+          window.setTimeout(() => {
+            finish();
+          }, stepMs)
+        );
         return;
       }
-      window.setTimeout(tick, stepMs);
+      timers.push(window.setTimeout(tick, stepMs));
     };
     tick();
   });

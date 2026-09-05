@@ -48,6 +48,7 @@ export const ALERTS: Readonly<Record<AlertName, AlertPreset>>;
 
 /**
  * Look up a named product alert preset.
+ * Returns a copy (sliced vibratePattern + copied shake) so callers cannot mutate shared ALERT_*.
  */
 export function getAlert(
   name: AlertName | string | null | undefined

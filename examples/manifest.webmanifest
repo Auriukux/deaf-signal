@@ -1,7 +1,7 @@
 {
   "name": "deaf-signal",
   "short_name": "deaf-signal",
-  "description": "Visual and haptic web alerts — no sound. Accessibility for deaf / hard-of-hearing.",
+  "description": "Visual and haptic web alerts. Accessibility for deaf / hard-of-hearing.",
   "start_url": "./demo.html",
   "scope": "./",
   "display": "standalone",

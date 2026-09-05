@@ -214,7 +214,15 @@ export async function startLoudListen(opts = {}) {
 
   let stream;
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    // Prefer echoCancellation / noiseSuppression on; leave autoGainControl to the UA
+    // so loudPeak RMS thresholds stay predictable. Fail-closed on any getUserMedia error.
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+      },
+      video: false,
+    });
   } catch (err) {
     const name = err && err.name ? err.name : "Error";
     const msg =

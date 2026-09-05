@@ -126,12 +126,20 @@ export const ALERTS = {
 
 /**
  * Look up a named product alert preset.
+ * Returns a shallow copy with sliced `vibratePattern` and copied `shake`
+ * so callers cannot mutate shared `ALERT_*` / `ALERTS` entries (parity with {@link getPreset}).
  * @param {"call"|"message"|"door"|"siren"|"horn"|"urgent"|string} name
  * @returns {AlertPreset|undefined}
  */
 export function getAlert(name) {
   if (name == null) return undefined;
-  return ALERTS[String(name).toLowerCase()];
+  const preset = ALERTS[String(name).toLowerCase()];
+  if (!preset) return undefined;
+  return {
+    ...preset,
+    vibratePattern: preset.vibratePattern.slice(),
+    shake: preset.shake ? { ...preset.shake } : undefined,
+  };
 }
 
 /**
