@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping improve **deaf-signal** - visual + haptic alerts with no sound.
+Thanks for helping improve **deaf-signal** — visual + haptic alerts.
 
 ## Run the demo
 

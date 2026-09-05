@@ -1,5 +1,5 @@
 /**
- * deaf-signal — visual + haptic web alerts (no sound).
+ * deaf-signal — visual + haptic web alerts.
  * Accessibility helpers for deaf / hard-of-hearing users.
  */
 
