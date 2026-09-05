@@ -1,7 +1,7 @@
 {
   "name": "deaf-signal",
   "version": "0.1.0",
-  "description": "Visual and haptic web alerts — no sound. Accessibility for deaf / hard-of-hearing.",
+  "description": "Visual and haptic web alerts for deaf / hard-of-hearing accessibility.",
   "type": "module",
   "main": "./src/index.js",
   "module": "./src/index.js",
@@ -58,7 +58,6 @@
     "visual-alert",
     "banner",
     "flash",
-    "no-sound",
     "inclusive"
   ],
   "author": "Auriukux",

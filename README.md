@@ -1,6 +1,6 @@
 # deaf-signal
 
-**Visual and haptic web alerts — no sound.**  
+**Visual and haptic web alerts.**  
 A tiny ESM library for deaf / hard-of-hearing accessibility on the web.
 
 Flash the screen, show a high-contrast banner, vibrate when supported, or combine them — without relying on audio.
@@ -195,7 +195,7 @@ Existing `PATTERN_*` / `getPreset()` vibrate-only presets remain unchanged.
 
 `requestNotifyPermission()` + `notifyAlert(title, opts?)` use the browser **Notification** API (zero deps).
 
-**No-sound by default:** Notification options use `silent: true` unless you pass `silent: false`. The library never plays audio; this only controls the OS notification sound. The same default applies on the Service Worker `showNotification` path (including the demo SW message handler).
+**Notifications default to silent:** options use `silent: true` unless you pass `silent: false`. That only controls the OS notification sound; the library never plays audio. The same default applies on the Service Worker `showNotification` path (including the demo SW message handler).
 
 **SW path vs page Notification:** when a **controlling Service Worker** exists (`hasControllingServiceWorker()`), `notifyAlert` prefers `ServiceWorkerRegistration.showNotification` (better for backgrounded / installed PWA demos). Otherwise it falls back to page `new Notification(...)`. The demo SW (`examples/sw.js`) also handles `notificationclick` (focus/open the demo) and `message` events `{ type: 'deaf-signal-notify', title, options }` (defaults `silent: true`).
 

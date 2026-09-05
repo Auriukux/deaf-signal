@@ -117,7 +117,7 @@ function buildNotificationOptions(opts) {
   } = opts;
 
   const resolvedIcon = resolveNotifyIcon(icon);
-  // Library is no-sound by default; pass silent: false to allow OS notification sound
+  // Notifications default to silent: true; pass silent: false to allow OS notification sound
   const isSilent = silent !== false;
 
   /** @type {NotificationOptions} */

@@ -1,5 +1,5 @@
 /**
- * Visual + haptic web alerts (no sound) for deaf / hard-of-hearing accessibility.
+ * Visual + haptic web alerts for deaf / hard-of-hearing accessibility.
  * @module deaf-signal/signals
  */
 
@@ -174,7 +174,7 @@ export function vibratePattern(
   opts?: VibratePatternOptions
 ): boolean;
 
-/** Pulse an element's border to draw attention without sound. */
+/** Pulse an element's border to draw visual attention. */
 export function pulseBorder(
   target: Element | string,
   opts?: PulseBorderOptions
