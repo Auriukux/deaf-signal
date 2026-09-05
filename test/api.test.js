@@ -290,7 +290,7 @@ describe("listen helpers", () => {
     };
 
     const prevWindow = globalThis.window;
-    const prevNav = globalThis.navigator;
+    const prevNavDesc = Object.getOwnPropertyDescriptor(globalThis, "navigator");
 
     globalThis.window = {
       isSecureContext: true,
@@ -300,13 +300,17 @@ describe("listen helpers", () => {
       addEventListener() {},
       removeEventListener() {},
     };
-    globalThis.navigator = {
-      mediaDevices: {
-        async getUserMedia() {
-          return stream;
+    Object.defineProperty(globalThis, "navigator", {
+      configurable: true,
+      writable: true,
+      value: {
+        mediaDevices: {
+          async getUserMedia() {
+            return stream;
+          },
         },
       },
-    };
+    });
 
     try {
       await assert.rejects(
@@ -324,8 +328,11 @@ describe("listen helpers", () => {
       } catch (_) {}
       if (prevWindow === undefined) delete globalThis.window;
       else globalThis.window = prevWindow;
-      if (prevNav === undefined) delete globalThis.navigator;
-      else globalThis.navigator = prevNav;
+      if (prevNavDesc) {
+        Object.defineProperty(globalThis, "navigator", prevNavDesc);
+      } else {
+        delete globalThis.navigator;
+      }
     }
   });
 });
