@@ -104,10 +104,38 @@ describe("alerts / getAlert", () => {
   });
 
   it("getAlert looks up by name", () => {
-    assert.equal(getAlert("door"), ALERT_DOOR);
-    assert.equal(getAlert("SIREN"), ALERT_SIREN);
+    assert.deepEqual(getAlert("door"), ALERT_DOOR);
+    assert.deepEqual(getAlert("SIREN"), ALERT_SIREN);
     assert.equal(getAlert("missing"), undefined);
     assert.equal(getAlert(null), undefined);
+  });
+
+  it("getAlert returns a deep-enough copy (parity with getPreset)", () => {
+    const door = getAlert("door");
+    assert.ok(door);
+    assert.notEqual(door, ALERT_DOOR);
+    assert.notEqual(door, ALERTS.door);
+    assert.deepEqual(door, ALERT_DOOR);
+    assert.notEqual(door.vibratePattern, ALERT_DOOR.vibratePattern);
+    assert.deepEqual(door.vibratePattern, ALERT_DOOR.vibratePattern);
+    door.vibratePattern[0] = 9999;
+    door.message = "mutated";
+    assert.equal(ALERT_DOOR.vibratePattern[0], 180);
+    assert.equal(ALERT_DOOR.message, "Door / doorbell");
+    assert.equal(ALERTS.door.message, "Door / doorbell");
+
+    if (door.shake) {
+      assert.notEqual(door.shake, ALERT_DOOR.shake);
+      door.shake.durationMs = 1;
+      assert.notEqual(ALERT_DOOR.shake.durationMs, 1);
+    }
+
+    const siren = getAlert("siren");
+    assert.notEqual(siren, ALERT_SIREN);
+    const origLen = ALERT_SIREN.vibratePattern.length;
+    siren.vibratePattern.push(1);
+    assert.equal(ALERT_SIREN.vibratePattern.length, origLen);
+    assert.equal(getAlert("siren").vibratePattern.length, origLen);
   });
 
   it("every ALERT_* has shake durationMs/amplitudePx and banner durationMs", () => {
@@ -141,7 +169,8 @@ describe("alerts / getAlert", () => {
 
   it("runAlert returns preset (combo no-ops without DOM) and wires known names", async () => {
     const r = await runAlert("siren");
-    assert.equal(r.alert, ALERT_SIREN);
+    assert.deepEqual(r.alert, ALERT_SIREN);
+    assert.notEqual(r.alert, ALERT_SIREN); // copy from getAlert
     assert.ok(r.combo);
     assert.equal(r.notification, null);
   });
