@@ -3,8 +3,10 @@
  * High RMS threshold by design: quiet rooms and soft speech should NOT fire.
  * RMS loudness ≠ siren / door / horn classification — peaks only, not event type.
  * Active sessions auto-stop on pagehide / beforeunload (and explicit stop()).
- * Visibility hidden does NOT stop by default (keeps listening in background tabs);
- * pass `stopOnHidden: true` to opt into the old auto-stop-on-hidden behavior.
+ * Visibility hidden does NOT stop by default (`stopOnHidden: false` is a preference,
+ * not a contract): background listening is best-effort — browsers may suspend
+ * AudioContext / throttle timers while the tab is hidden.
+ * Pass `stopOnHidden: true` to opt into auto-stop-on-hidden.
  * @module deaf-signal/listen
  */
 
@@ -52,7 +54,7 @@ let pendingStream = null;
  * @property {"urgent"|false|string} [alert] Auto `runAlert` name; default `"urgent"` (loudPeak / neutral). Product names (siren/door/…) remapped to urgent; unknown → skip (`null`). `false` = callback-only
  * @property {boolean} [notify] If true and Notification already granted, also `notifyAlert` (in addition to runAlert’s own notify path when alert runs)
  * @property {object} [alertOpts] Extra opts forwarded to `runAlert`
- * @property {boolean} [stopOnHidden] If true, also stop when `visibilitychange` → hidden (old behavior). Default false — keep listening while the tab is backgrounded.
+ * @property {boolean} [stopOnHidden] If true, also stop when `visibilitychange` → hidden. Default false — prefer keeping the session while backgrounded (best-effort; not a guarantee).
  * @property {() => void} [onStop] Called once when the session stops (explicit stop, pagehide/beforeunload, or stopOnHidden)
  */
 
@@ -169,8 +171,9 @@ function computeRms(analyser, buffer) {
  *
  * Registers `pagehide` and `beforeunload` handlers that call `stop()` so the mic
  * track is released on page unload. Does **not** stop on `visibilitychange` → hidden
- * unless `opts.stopOnHidden === true` (opt-in old behavior). Listening continues while
- * the tab is backgrounded by default.
+ * unless `opts.stopOnHidden === true`. With the default (`stopOnHidden: false`),
+ * background-tab listening is **best-effort** only — browsers may suspend
+ * `AudioContext` or throttle timers while hidden; this is a preference, not a contract.
  *
  * Default `alert` is `"urgent"` (neutral loudPeak). Mic stays separate from product
  * alerts (`ALERT_SIREN` / door / horn) — those belong on product preset buttons /
@@ -403,11 +406,26 @@ export async function startLoudListen(opts = {}) {
     }
   }
 
-  timerId = setInterval(tick, SAMPLE_INTERVAL_MS);
-  rafId = requestAnimationFrame(() => {
-    rafId = null;
-    tick();
-  });
+  // Final race gate: stop()/newer start may have won after resume (and any
+  // future awaits). Never mark a dead mic active or start timers if superseded.
+  if (myGen !== listenGeneration) {
+    try {
+      source.disconnect();
+    } catch (_) {}
+    try {
+      analyser.disconnect();
+    } catch (_) {}
+    try {
+      stream.getTracks().forEach((t) => t.stop());
+    } catch (_) {}
+    try {
+      if (audioContext.state !== "closed") {
+        audioContext.close();
+      }
+    } catch (_) {}
+    if (pendingStream === stream) pendingStream = null;
+    throw new Error("Loud listen start aborted (superseded by a newer start/stop).");
+  }
 
   /** @type {LoudListenController} */
   const controller = {
@@ -421,11 +439,17 @@ export async function startLoudListen(opts = {}) {
     },
   };
 
+  timerId = setInterval(tick, SAMPLE_INTERVAL_MS);
+  rafId = requestAnimationFrame(() => {
+    rafId = null;
+    tick();
+  });
+
   pendingStream = null;
   activeController = controller;
 
-  // Stop mic on page unload (avoid leaking the track). Hidden tabs keep listening
-  // unless stopOnHidden is opted in.
+  // Stop mic on page unload (avoid leaking the track). stopOnHidden:false prefers
+  // keeping the session while hidden (best-effort — not guaranteed).
   if (typeof window !== "undefined") {
     window.addEventListener("pagehide", onLifecycleStop);
     window.addEventListener("beforeunload", onLifecycleStop);

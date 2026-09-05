@@ -55,7 +55,7 @@ export interface FlashScreenOptions {
   color?: string | null;
   /** How long the flash stays visible (default 400) */
   durationMs?: number;
-  /** Overlay opacity 0–1 (default 0.55) */
+  /** Overlay opacity clamped to 0–1 (default 0.55) */
   opacity?: number;
   /** Force skip/respect reduced motion (default: OS preference) */
   reduceMotion?: boolean;
@@ -155,7 +155,9 @@ export function showBanner(
 
 /**
  * Visual shake via CSS @keyframes / Web Animations.
- * @returns true if a visual cue ran
+ * Overlapping calls on the same element abort the prior shake; the prior
+ * Promise resolves `false`. A finished cue resolves `true`.
+ * @returns `true` if this call's cue finished; `false` if skipped or aborted by overlap
  */
 export function shakeElement(
   target: Element | string,
