@@ -757,7 +757,8 @@
       return runAlert(name, {
         message: t[msgKey],
         closeLabel: t.close,
-        shakeTarget: document.querySelector("#product-alerts") || document.querySelector("main") || document.body,
+        // Explicit panel target — library no longer defaults shake to body/main
+        shakeTarget: document.querySelector("#product-alerts") || document.querySelector(".card"),
       });
     }
 
@@ -816,12 +817,13 @@
         listenCtrl = await startLoudListen({
           threshold: DEFAULT_LOUD_THRESHOLD,
           minIntervalMs: 2500,
+          // Opt-in alert (0.2 default is alert: false — callback-only)
           // loudPeak only — never wire mic to ALERT_SIREN / door / horn
           alert: "urgent",
           // Prefer keep-alive while hidden (best-effort — not a browser contract)
           stopOnHidden: false,
           alertOpts: {
-            shakeTarget: document.querySelector("#loud-listen") || document.querySelector("main") || document.body,
+            shakeTarget: document.querySelector("#loud-listen") || document.querySelector(".card"),
             message: strings[lang].listenFired,
             closeLabel: strings[lang].close,
           },

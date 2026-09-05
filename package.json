@@ -1,6 +1,6 @@
 {
   "name": "deaf-signal",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Visual and haptic web alerts for deaf / hard-of-hearing accessibility.",
   "type": "module",
   "main": "./src/index.js",
@@ -46,7 +46,7 @@
   "scripts": {
     "demo": "npx --yes serve .",
     "test": "node --test test/*.test.js",
-    "typecheck": "npx --yes -p typescript@5.6.3 tsc --noEmit --module nodenext --moduleResolution nodenext --target es2022 --strict src/index.d.ts src/signals.d.ts src/presets.d.ts src/notify.d.ts src/alerts.d.ts src/listen.d.ts"
+    "typecheck": "npx --yes -p typescript@5.6.3 tsc --noEmit -p tsconfig.json"
   },
   "keywords": [
     "a11y",

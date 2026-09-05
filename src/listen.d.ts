@@ -14,7 +14,10 @@ export const DEFAULT_LOUD_THRESHOLD: number;
 /** Default cooldown between loud triggers (ms). */
 export const DEFAULT_MIN_INTERVAL_MS: number;
 
-/** Default product alert when loud peak fires (`"urgent"`). */
+/**
+ * Recommended neutral alert name when opting into auto-`runAlert`.
+ * Default for `startLoudListen` is `alert: false` — pass this to opt in.
+ */
 export const DEFAULT_LOUD_ALERT: "urgent";
 
 export interface LoudEvent {
@@ -34,15 +37,15 @@ export interface StartLoudListenOptions {
   /** Optional live meter callback (~50–100ms) */
   onLevel?: (level: number) => void;
   /**
-   * Auto `runAlert` name for a **loudPeak** cue; default `"urgent"` (neutral).
+   * Auto `runAlert` name for a **loudPeak** cue; **default `false`** (callback-only).
+   * Pass `"urgent"` / `DEFAULT_LOUD_ALERT` to opt in.
    * Product event names (`siren` / `door` / `horn` / …) remap to `"urgent"`;
    * unknown names skip the alert (`null`) — mic RMS is not a classifier.
-   * Pass `false` for callback-only (`onLoud` / `notify`).
    */
   alert?: "urgent" | false | string;
   /**
-   * If true and Notification already granted, also notify when `alert` is false.
-   * When `alert` runs, `runAlert` already notifies if permission is granted.
+   * If true and Notification already granted, also notify when `alert` is skipped.
+   * When `alert` runs, pass `alertOpts: { notify: true }` (runAlert notify is opt-in).
    */
   notify?: boolean;
   /** Extra opts forwarded to `runAlert` */
@@ -65,7 +68,7 @@ export interface LoudListenController {
   active: boolean;
 }
 
-/** Resolve loudPeak alert name (`false` / unknown → null; default / product → `"urgent"`). */
+/** Resolve loudPeak alert name (`false` / omitted / unknown → null; `"urgent"` / product → `"urgent"`). */
 export function resolveLoudAlertName(
   alert?: StartLoudListenOptions["alert"] | null
 ): string | null;

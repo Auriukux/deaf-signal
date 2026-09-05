@@ -7,6 +7,23 @@ const DEFAULT_FLASH_MS = 400;
 const DEFAULT_BANNER_MS = 3000;
 const DEFAULT_SHAKE_MS = 550;
 
+/**
+ * Max flashScreen duration (ms) — a11y / photosensitivity cap.
+ * Longer requests are clamped; default remains {@link DEFAULT_FLASH_MS} (400).
+ */
+export const FLASH_DURATION_MAX = 800;
+
+/**
+ * Clamp flash duration to 0…{@link FLASH_DURATION_MAX} (invalid → default 400).
+ * @param {unknown} durationMs
+ * @returns {number}
+ */
+export function clampFlashDuration(durationMs) {
+  const n = Number(durationMs);
+  const v = Number.isFinite(n) ? n : DEFAULT_FLASH_MS;
+  return Math.max(0, Math.min(FLASH_DURATION_MAX, v));
+}
+
 /** Min/max shake amplitude (px) — honest API range. */
 export const SHAKE_AMPLITUDE_MIN = 2;
 export const SHAKE_AMPLITUDE_MAX = 64;
@@ -32,12 +49,14 @@ function shouldReduceMotion(explicit) {
   if (explicit === true) return true;
   if (explicit === false) return false;
   if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    // No media-query API (SSR / Node) — no DOM motion to reduce
     return false;
   }
   try {
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   } catch {
-    return false;
+    // Fail closed: prefer less motion when the query errors
+    return true;
   }
 }
 
@@ -299,16 +318,17 @@ function ensureSharedFlashOverlay() {
  * When `color` is omitted, picks contrast via {@link contrastFlashColor}.
  * @param {object} [opts]
  * @param {string} [opts.color]
- * @param {number} [opts.durationMs]
+ * @param {number} [opts.durationMs] Visible duration (default 400; clamped to {@link FLASH_DURATION_MAX} = 800ms)
  * @param {number} [opts.opacity] Overlay opacity clamped to 0–1 (default 0.55)
  * @param {boolean} [opts.reduceMotion]
  * @returns {Promise<void>}
  */
 export function flashScreen(opts = {}) {
   const {
-    durationMs = DEFAULT_FLASH_MS,
+    durationMs: durationMsRaw = DEFAULT_FLASH_MS,
     reduceMotion: reduceMotionOpt,
   } = opts;
+  const durationMs = clampFlashDuration(durationMsRaw);
   const rawOpacity = opts.opacity;
   const opacityNum =
     typeof rawOpacity === "number" && Number.isFinite(rawOpacity)
@@ -692,11 +712,13 @@ export function shakeElement(target, opts = {}) {
  * as well — desktop browsers often expose `navigator.vibrate` that returns true but
  * does nothing, so shake must not wait on vibrate failing.
  * Optionally still calls `navigator.vibrate` when supported.
- * Shake target: `opts.target`, else `main`, else `document.body`.
+ * Shake target: **required** via `opts.target` when `shakeFallback` is on.
+ * Does **not** shake `document.body` / `main` by default (a11y — avoid whole-page shake).
+ * Pass an explicit Element or selector (e.g. `.card`, `#alert-panel`).
  * @param {number|number[]} [pattern=[200,100,200]] Duration(s) in ms
  * @param {object} [opts]
- * @param {boolean} [opts.shakeFallback=true] Always run visual shake (in addition to vibrate)
- * @param {Element|string} [opts.target] Shake target (default: main, then body)
+ * @param {boolean} [opts.shakeFallback=true] Run visual shake when an explicit target is set
+ * @param {Element|string} [opts.target] **Required** for visual shake (no body/main default)
  * @param {boolean} [opts.reduceMotion] Passed through to shakeElement
  * @param {number} [opts.durationMs] Shake duration (ms)
  * @param {number} [opts.amplitudePx] Shake amplitude (px)
@@ -728,16 +750,13 @@ export function vibratePattern(pattern = [200, 100, 200], opts = {}) {
     return vibrated;
   }
 
-  const shakeTarget =
-    resolveElement(target) ||
-    document.querySelector("main") ||
-    document.body;
-
+  // Explicit target only — never default to main/body (breaking vs 0.1)
+  const shakeTarget = resolveElement(target);
   if (!shakeTarget) {
     return vibrated;
   }
 
-  // Always shake when fallback is on — desktop vibrate is often a no-op.
+  // Always shake when fallback is on + target set — desktop vibrate is often a no-op.
   const shakeOpts = { reduceMotion: reduceMotionOpt };
   if (shakeDurationMs != null) shakeOpts.durationMs = shakeDurationMs;
   if (shakeAmplitudePx != null) shakeOpts.amplitudePx = shakeAmplitudePx;

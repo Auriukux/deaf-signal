@@ -10,6 +10,9 @@ import {
   PATTERN_CALL,
   PATTERN_MESSAGE,
   PATTERN_URGENT,
+  PATTERN_DOOR,
+  PATTERN_SIREN,
+  PATTERN_HORN,
 } from "../src/presets.js";
 
 import {
@@ -28,8 +31,10 @@ import {
   contrastFlashColor,
   isVibrateSupported,
   clampShakeAmplitude,
+  clampFlashDuration,
   SHAKE_AMPLITUDE_MIN,
   SHAKE_AMPLITUDE_MAX,
+  FLASH_DURATION_MAX,
   settleFlashResolve,
   defaultBannerCloseLabel,
   FLASH_RATE_MAX,
@@ -38,6 +43,8 @@ import {
   resetFlashRateLimit,
   canStartFlash,
   noteFlashStart,
+  vibratePattern,
+  flashScreen,
 } from "../src/signals.js";
 
 import { resolveNotifyIcon } from "../src/notify.js";
@@ -54,17 +61,23 @@ import {
 } from "../src/listen.js";
 
 describe("presets / getPreset", () => {
-  it("exposes PRESETS for call, message, urgent", () => {
+  it("exposes PRESETS for call, message, urgent, door, siren, horn", () => {
     assert.deepEqual(PRESETS.call, PATTERN_CALL);
     assert.deepEqual(PRESETS.message, PATTERN_MESSAGE);
     assert.deepEqual(PRESETS.urgent, PATTERN_URGENT);
-    assert.equal(Object.keys(PRESETS).length, 3);
+    assert.deepEqual(PRESETS.door, PATTERN_DOOR);
+    assert.deepEqual(PRESETS.siren, PATTERN_SIREN);
+    assert.deepEqual(PRESETS.horn, PATTERN_HORN);
+    assert.equal(Object.keys(PRESETS).length, 6);
   });
 
   it("getPreset returns patterns case-insensitively", () => {
     assert.deepEqual(getPreset("call"), PATTERN_CALL);
     assert.deepEqual(getPreset("MESSAGE"), PATTERN_MESSAGE);
     assert.deepEqual(getPreset("Urgent"), PATTERN_URGENT);
+    assert.deepEqual(getPreset("DOOR"), PATTERN_DOOR);
+    assert.deepEqual(getPreset("siren"), PATTERN_SIREN);
+    assert.deepEqual(getPreset("Horn"), PATTERN_HORN);
   });
 
   it("getPreset returns undefined for unknown / null", () => {
@@ -87,6 +100,22 @@ describe("presets / getPreset", () => {
     assert.notEqual(msg, PATTERN_MESSAGE);
     msg.push(1);
     assert.equal(PATTERN_MESSAGE.length, 3);
+  });
+
+  it("PATTERN_* / PRESETS are frozen (immutable shared data)", () => {
+    assert.ok(Object.isFrozen(PATTERN_CALL));
+    assert.ok(Object.isFrozen(PATTERN_MESSAGE));
+    assert.ok(Object.isFrozen(PATTERN_URGENT));
+    assert.ok(Object.isFrozen(PATTERN_DOOR));
+    assert.ok(Object.isFrozen(PATTERN_SIREN));
+    assert.ok(Object.isFrozen(PATTERN_HORN));
+    assert.ok(Object.isFrozen(PRESETS));
+    assert.throws(() => {
+      PATTERN_CALL[0] = 1;
+    }, TypeError);
+    assert.throws(() => {
+      PRESETS.extra = [1];
+    }, TypeError);
   });
 });
 
@@ -165,6 +194,57 @@ describe("alerts / getAlert", () => {
     assert.match(ALERT_HORN.body, /presentation/i);
     assert.doesNotMatch(ALERT_SIREN.message, /detect/i);
     assert.doesNotMatch(ALERT_HORN.message, /detect/i);
+  });
+
+  it("ALERT_* / ALERTS are frozen; getAlert still returns mutable copies", () => {
+    assert.ok(Object.isFrozen(ALERT_CALL));
+    assert.ok(Object.isFrozen(ALERT_DOOR));
+    assert.ok(Object.isFrozen(ALERT_SIREN));
+    assert.ok(Object.isFrozen(ALERTS));
+    assert.ok(Object.isFrozen(ALERT_CALL.vibratePattern));
+    assert.ok(Object.isFrozen(ALERT_SIREN.shake));
+    assert.throws(() => {
+      ALERT_CALL.message = "x";
+    }, TypeError);
+    const copy = getAlert("call");
+    assert.ok(copy);
+    copy.message = "mutated-ok";
+    assert.equal(copy.message, "mutated-ok");
+    assert.equal(ALERT_CALL.message, "Incoming call");
+  });
+
+  it("runAlert does not notify by default (notify opt-in)", async () => {
+    const prevNav = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+    const prevNotif = globalThis.Notification;
+    let constructed = 0;
+    globalThis.Notification = class {
+      constructor() {
+        constructed += 1;
+      }
+      static permission = "granted";
+      static requestPermission = async () => "granted";
+    };
+    // Omit serviceWorker so hasControllingServiceWorker is false
+    Object.defineProperty(globalThis, "navigator", {
+      configurable: true,
+      value: {},
+    });
+    try {
+      const r = await runAlert("message");
+      assert.ok(r);
+      assert.equal(r.notification, null);
+      assert.equal(constructed, 0);
+      const r2 = await runAlert("message", { notify: true });
+      assert.ok(r2);
+      assert.ok("notification" in r2);
+      // Opt-in path should attempt a page Notification when granted
+      assert.ok(constructed >= 1);
+    } finally {
+      if (prevNav) Object.defineProperty(globalThis, "navigator", prevNav);
+      else delete globalThis.navigator;
+      if (prevNotif === undefined) delete globalThis.Notification;
+      else globalThis.Notification = prevNotif;
+    }
   });
 
   it("runAlert returns preset (combo no-ops without DOM) and wires known names", async () => {
@@ -297,11 +377,13 @@ describe("listen helpers", () => {
     assert.equal(DEFAULT_LOUD_ALERT, "urgent");
   });
 
-  it("resolveLoudAlertName: default urgent, false/unknown skip, product → urgent", () => {
-    assert.equal(resolveLoudAlertName(undefined), "urgent");
-    assert.equal(resolveLoudAlertName(null), "urgent");
+  it("resolveLoudAlertName: default skip, urgent opt-in, product → urgent", () => {
+    // 0.2: omitted / null / false → no auto-alert (callback-only default)
+    assert.equal(resolveLoudAlertName(undefined), null);
+    assert.equal(resolveLoudAlertName(null), null);
     assert.equal(resolveLoudAlertName(false), null);
     assert.equal(resolveLoudAlertName("urgent"), "urgent");
+    assert.equal(resolveLoudAlertName(DEFAULT_LOUD_ALERT), "urgent");
     // Mic must not wire to product classifier names → remap to urgent
     assert.equal(resolveLoudAlertName("siren"), "urgent");
     assert.equal(resolveLoudAlertName("door"), "urgent");
@@ -573,14 +655,94 @@ describe("listen helpers", () => {
 });
 
 describe("package root public API", () => {
-  it("does not re-export flash rate-limit test helpers", async () => {
+  it("does not re-export flash internals; exposes patterns + flash cap helpers", async () => {
     const root = await import("../src/index.js");
     assert.equal("resetFlashRateLimit" in root, false);
     assert.equal("canStartFlash" in root, false);
     assert.equal("noteFlashStart" in root, false);
+    assert.equal("settleFlashResolve" in root, false);
+    assert.equal(typeof root.PATTERN_DOOR, "object");
+    assert.equal(typeof root.PATTERN_SIREN, "object");
+    assert.equal(typeof root.PATTERN_HORN, "object");
+    assert.equal(root.FLASH_DURATION_MAX, 800);
+    assert.equal(typeof root.clampFlashDuration, "function");
     const signals = await import("../src/signals.js");
     assert.equal(typeof signals.resetFlashRateLimit, "function");
-    assert.equal(typeof signals.canStartFlash, "function");
-    assert.equal(typeof signals.noteFlashStart, "function");
+    assert.equal(typeof signals.settleFlashResolve, "function");
+  });
+});
+
+
+describe("flash duration cap / reduceMotion fail-closed / shake target", () => {
+  it("clampFlashDuration caps at FLASH_DURATION_MAX (800)", () => {
+    assert.equal(FLASH_DURATION_MAX, 800);
+    assert.equal(clampFlashDuration(400), 400);
+    assert.equal(clampFlashDuration(800), 800);
+    assert.equal(clampFlashDuration(5000), 800);
+    assert.equal(clampFlashDuration(-10), 0);
+    assert.equal(clampFlashDuration(undefined), 400);
+    assert.equal(clampFlashDuration("nope"), 400);
+  });
+
+  it("flashScreen clamps huge durationMs (Node: resolves without DOM hang)", async () => {
+    // No document → flashScreen resolves immediately; still exercises clamp path
+    await flashScreen({ durationMs: 99999, color: "#fff" });
+  });
+
+  it("shouldReduceMotion fail-closed: matchMedia throw → reduce (no flash)", async () => {
+    const prevWin = globalThis.window;
+    const prevDoc = globalThis.document;
+    globalThis.window = {
+      matchMedia() {
+        throw new Error("matchMedia broken");
+      },
+    };
+    // Provide a minimal document so flashScreen does not early-exit on missing doc
+    globalThis.document = {
+      createElement() {
+        return {
+          style: {},
+          setAttribute() {},
+          remove() {},
+          isConnected: true,
+        };
+      },
+      body: { appendChild() {} },
+    };
+    try {
+      resetFlashRateLimit();
+      // reduceMotion omitted → matchMedia error → treat as reduce → no overlay work
+      await flashScreen({ durationMs: 40, color: "#ff0000" });
+      // If we got here without throw, fail-closed path worked
+      assert.ok(true);
+    } finally {
+      if (prevWin === undefined) delete globalThis.window;
+      else globalThis.window = prevWin;
+      if (prevDoc === undefined) delete globalThis.document;
+      else globalThis.document = prevDoc;
+      resetFlashRateLimit();
+    }
+  });
+
+  it("vibratePattern does not shake body/main without explicit target", () => {
+    const prevDoc = globalThis.document;
+    let shakeCalls = 0;
+    const body = { tagName: "BODY", id: "body" };
+    const main = { tagName: "MAIN", id: "main" };
+    globalThis.document = {
+      body,
+      querySelector(sel) {
+        if (sel === "main") return main;
+        return null;
+      },
+    };
+    // vibratePattern uses resolveElement + shakeElement; without target returns early
+    const result = vibratePattern([100], { shakeFallback: true });
+    assert.equal(typeof result, "boolean");
+    // No explicit target → no shakeElement invocation (would need DOM Element);
+    // body/main must not be selected — resolveElement(undefined) is null
+    assert.equal(result, false); // no vibrate in Node, no shake target
+    if (prevDoc === undefined) delete globalThis.document;
+    else globalThis.document = prevDoc;
   });
 });

@@ -241,11 +241,9 @@ async function runVisibleCues(title, opts) {
       flash: flash !== false,
       vibrate: true,
       vibratePattern: pattern,
-      shakeFallback: shake !== false,
-      shakeTarget:
-        shakeTarget ||
-        document.querySelector("main") ||
-        document.body,
+      // Visual shake only when an explicit shakeTarget is provided (no body/main default)
+      shakeFallback: shake !== false && shakeTarget != null,
+      shakeTarget,
       reduceMotion,
     });
     return;
@@ -260,18 +258,15 @@ async function runVisibleCues(title, opts) {
     tasks.push(flashScreen(flashOpts));
   }
 
-  if (shake) {
-    const target =
-      shakeTarget ||
-      document.querySelector("main") ||
-      document.body;
-    // vibratePattern also shakes when shakeFallback is on
+  if (shake && shakeTarget != null) {
+    // Explicit target required — never default to main/body
     vibratePattern(pattern, {
       shakeFallback: true,
-      target,
+      target: shakeTarget,
       reduceMotion,
     });
-  } else if (vibrate != null) {
+  } else if (shake || vibrate != null) {
+    // Haptic only when no explicit shake target
     vibratePattern(pattern, { shakeFallback: false });
   }
 
@@ -302,7 +297,7 @@ async function runVisibleCues(title, opts) {
  * @param {boolean} [opts.flash=true] When visible: flash the screen
  * @param {boolean} [opts.shake=true] When visible: shake / vibrate
  * @param {boolean} [opts.combo=false] When visible: use {@link alertCombo} (banner + flash + vibrate); skips Notification.vibrate while visible so haptic is not doubled
- * @param {Element|string} [opts.shakeTarget] Shake / pulse target
+ * @param {Element|string} [opts.shakeTarget] Required for visual shake (no body/main default)
  * @param {boolean} [opts.requireInteraction] Keep notification until dismissed
  * @param {boolean} [opts.silent=true] Notification `silent` — **default `true`** (no OS sound); pass `false` to allow sound. Library itself never plays audio.
  * @param {boolean} [opts.notification] Force show/hide Notification when visible (`undefined` = show if granted)

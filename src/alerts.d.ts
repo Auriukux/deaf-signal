@@ -67,7 +67,7 @@ export interface RunAlertOptions
   durationMs?: number;
   /** Banner close button aria-label */
   closeLabel?: string;
-  /** Force/disable notify (default: notify when permission already granted) */
+  /** Opt-in system Notification (default `false`; pass `true` when permission granted) */
   notify?: boolean;
   tag?: string;
   requireInteraction?: boolean;
@@ -79,9 +79,14 @@ export interface RunAlertResult {
   notification: NotifyAlertResult | null;
 }
 
+/** Cue vibration patterns (not detectors) — also on `deaf-signal/presets`. */
+export const PATTERN_DOOR: readonly number[];
+export const PATTERN_SIREN: readonly number[];
+export const PATTERN_HORN: readonly number[];
+
 /**
- * Run a named product alert: alertCombo plus optional notifyAlert
- * when Notification permission is already granted.
+ * Run a named product alert: alertCombo plus optional notifyAlert.
+ * Notify is **opt-in** via `{ notify: true }` (default false).
  * Unknown names: console.warn + returns false (fail-closed).
  */
 export function runAlert(
