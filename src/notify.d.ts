@@ -25,8 +25,8 @@ export interface NotifyAlertOptions {
   tag?: string;
   /**
    * Notification icon URL.
-   * Omit to use `./icons/icon-192.png` relative to the current page (demo / Pages).
-   * Pass `false` to skip an icon. Library consumers should usually pass an absolute URL.
+   * Omit / undefined = no icon. Pass a URL (absolute or page-relative) for an icon.
+   * Pass `false` to skip an icon explicitly. Consumers should pass their own icon URL.
    */
   icon?: string | false;
   /** Pattern for notification + in-page vibrate */
@@ -60,8 +60,8 @@ export interface NotifyAlertResult {
 }
 
 /**
- * Resolve Notification icon: `false` → omit; string → as-is; omitted →
- * `./icons/icon-192.png` relative to the page.
+ * Resolve Notification icon: `false` / omitted / null / "" → undefined (no icon);
+ * string → as-is. Consumers should pass an explicit icon URL when desired.
  */
 export function resolveNotifyIcon(
   icon?: string | false | null

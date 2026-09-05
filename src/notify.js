@@ -85,26 +85,17 @@ function urgencyFromLevel(level) {
 
 /**
  * Resolve Notification icon URL.
- * - `icon: false` → omit icon
- * - string → use as-is
- * - omitted → `./icons/icon-192.png` relative to the current page (demo / Pages)
- * Library consumers on other origins should pass `icon` explicitly.
+ * - `icon: false` -> omit icon
+ * - string -> use as-is
+ * - omitted / null / "" -> no icon (undefined)
+ * Consumers should pass an explicit `icon` URL when they want one (e.g. demo / app asset).
  * @param {string|false|undefined|null} icon
  * @returns {string|undefined}
  */
 export function resolveNotifyIcon(icon) {
   if (icon === false) return undefined;
   if (icon != null && icon !== "") return String(icon);
-  const base =
-    (typeof document !== "undefined" && document.baseURI) ||
-    (typeof location !== "undefined" && location.href) ||
-    "";
-  if (!base) return undefined;
-  try {
-    return new URL("./icons/icon-192.png", base).href;
-  } catch {
-    return "./icons/icon-192.png";
-  }
+  return undefined;
 }
 
 /**
@@ -303,7 +294,7 @@ async function runVisibleCues(title, opts) {
  * @param {"info"|"warn"|"urgent"|string} [opts.level="info"] Severity (also drives defaults)
  * @param {"low"|"normal"|"high"|"critical"|string} [opts.urgency] Notification urgency override
  * @param {string} [opts.tag] Notification tag (replaces prior with same tag)
- * @param {string|false} [opts.icon] Notification icon URL; omit for `./icons/icon-192.png` relative to page; `false` to skip
+ * @param {string|false} [opts.icon] Notification icon URL; omit / undefined = no icon; pass a URL for an icon; `false` to skip
  * @param {number|number[]} [opts.vibrate] Pattern for notification + in-page vibrate
  * @param {boolean} [opts.flash=true] When visible: flash the screen
  * @param {boolean} [opts.shake=true] When visible: shake / vibrate
