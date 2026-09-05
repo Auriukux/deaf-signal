@@ -223,22 +223,19 @@ describe("signals pure helpers", () => {
 });
 
 describe("notify icon helper", () => {
-  it("resolveNotifyIcon: false skips; string kept; omitted needs page base", () => {
+  it("resolveNotifyIcon: false / omitted / null skip; string kept", () => {
     assert.equal(resolveNotifyIcon(false), undefined);
     assert.equal(resolveNotifyIcon("/my-icon.png"), "/my-icon.png");
-    // No document.baseURI / location in Node → undefined default
     assert.equal(resolveNotifyIcon(undefined), undefined);
     assert.equal(resolveNotifyIcon(null), undefined);
+    assert.equal(resolveNotifyIcon(""), undefined);
   });
 
-  it("resolveNotifyIcon defaults to ./icons/icon-192.png relative to baseURI", () => {
+  it("resolveNotifyIcon does not invent a default icon from page baseURI", () => {
     const prevDoc = globalThis.document;
     globalThis.document = { baseURI: "https://example.com/examples/demo.html" };
     try {
-      assert.equal(
-        resolveNotifyIcon(undefined),
-        "https://example.com/examples/icons/icon-192.png"
-      );
+      assert.equal(resolveNotifyIcon(undefined), undefined);
     } finally {
       if (prevDoc === undefined) delete globalThis.document;
       else globalThis.document = prevDoc;

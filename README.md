@@ -47,7 +47,7 @@ You can also copy `src/` into your project and import the modules directly.
 
 ESM imports may be blocked from `file://`, so prefer this local server over opening `examples/demo.html` directly.
 
-### B) Install as a dependency into another project
+### B) Install as a library into another project
 
 1. `cd` into **your** project folder (the one that already has your own `package.json`).
 2. Install from GitHub (there is no npm registry package yet):
@@ -56,33 +56,11 @@ ESM imports may be blocked from `file://`, so prefer this local server over open
 npm i github:Auriukux/deaf-signal
 ```
 
-This puts the package in `node_modules/deaf-signal`.
+This puts the package in `node_modules/deaf-signal`. The published package `files` list includes only **`src/`** (plus LICENSE / README) — **not** `examples/` or the demo server. A GitHub install is **library-only**: import modules in your app; do **not** expect `npm run demo` to work from `node_modules`.
 
-3. Run the demo **from inside that package** — not from your project root. Avoid broken PowerShell `&&` by using one of these:
+3. In your code, import from `deaf-signal` as shown in **Usage** below.
 
-Cross-platform (any shell):
-
-```bash
-npm run demo --prefix node_modules/deaf-signal
-```
-
-PowerShell:
-
-```powershell
-cd node_modules\deaf-signal; npm run demo
-```
-
-Or two separate lines (any shell):
-
-```bash
-cd node_modules/deaf-signal
-npm run demo
-```
-
-4. Browser: open **http://localhost:3000** (same as above).
-5. In your code, import from `deaf-signal` as shown in **Usage** below.
-
-**Note:** `npm run demo` in the **parent** folder fails with **Missing script** — the demo script lives inside the package, not on your project's `package.json`.
+**To try the interactive demo:** use path **A** (git clone + `npm run demo`) or open the hosted demo on **GitHub Pages**: [https://auriukux.github.io/deaf-signal/](https://auriukux.github.io/deaf-signal/) ([examples/demo.html](https://auriukux.github.io/deaf-signal/examples/demo.html)).
 
 The demo UI has an LT | EN language toggle (choice saved in `localStorage`); the library API is English. With **Reduce motion** enabled, flash and pulse animations are skipped or softened automatically. Desktop browsers often expose Vibration API that does nothing — with `shakeFallback` (default on), visual shake always runs so the cue is visible. **iPhone Safari:** no Vibration API — visual shake only. Demo copy marks product buttons as **manual cues** and mic as **loudness peak only**. Flashes are rate-limited; the demo shows a short photosensitive-epilepsy warning.
 
@@ -137,6 +115,7 @@ await notifyAlert("Incoming alert", {
   body: "Check your messages",
   level: "urgent",
   tag: "deaf-signal",
+  icon: "/path/to/your-icon.png", // pass your own icon URL; default is no icon
   flash: true,
   shake: true,
   combo: true,
@@ -220,6 +199,8 @@ Existing `PATTERN_*` / `getPreset()` vibrate-only presets remain unchanged.
 
 When the document is hidden, the system notification (and notification `vibrate` where supported) is the main cue. When the tab is visible, `notifyAlert` also calls the existing flash / shake / combo helpers (combo:true uses one haptic path via alertCombo and skips stacking Notification.vibrate while visible).
 
+Pass `icon` (absolute or page-relative URL) when you want a Notification icon; omitted / `undefined` means **no icon** (the library does not assume `./icons/icon-192.png`). Pass `icon: false` to force omit. The demo passes an explicit icon path.
+
 Browsers only grant permission after a **user gesture**. True OS-level background delivery usually requires an **installed PWA** (and browser support). A backgrounded tab can still deliver SW notifications while the worker is alive; a **fully killed** app is still OS-limited (especially iOS). Page-only Notifications need the tab to stay alive. Missing Notification API → graceful no-ops for the notification part; visible visual cues still run.
 
 ### Optional mic loud listen
@@ -265,18 +246,13 @@ Nežinote, kuriame aplanke esate? Šis README — žemėlapis. Eikite pagal nume
 5. Naršyklėje: **http://localhost:3000** (arba `/demo`) → demo su **LT | EN**.
 6. Stabdyti: **Ctrl+C** tame pačiame terminale.
 
-### B) Įdiegti kaip priklausomybę į kitą projektą
+### B) Įdiegti kaip biblioteką į kitą projektą
 
 1. `cd` į **savo** projekto aplanką (su jūsų `package.json`).
-2. `npm i github:Auriukux/deaf-signal` → įdiegia į `node_modules/deaf-signal`.
-3. Paleiskite demo **iš paketo vidaus** (ne iš tėvinio aplanko). Venkite PowerShell `&&`:
-   - Bet kuriame shell: `npm run demo --prefix node_modules/deaf-signal`
-   - PowerShell: `cd node_modules\deaf-signal; npm run demo`
-   - Arba dvi eilutės: `cd` tada `npm run demo`
-4. Naršyklė: **http://localhost:3000**.
-5. Kode importuokite iš `deaf-signal` (žr. **Usage**).
+2. `npm i github:Auriukux/deaf-signal` → įdiegia į `node_modules/deaf-signal`. Paketas (`files`) turi tik **`src/`** (+ LICENSE / README) — **be** `examples/` ir demo serverio. GitHub diegimas = **tik biblioteka**; `npm run demo` iš `node_modules` neveiks.
+3. Kode importuokite iš `deaf-signal` (žr. **Usage**).
 
-**Pastaba:** tėviniame aplanke `npm run demo` duoda **Missing script** — demo skriptas yra tik pakete.
+**Demo:** kelias **A** (klonavimas + `npm run demo`) arba **GitHub Pages**: [https://auriukux.github.io/deaf-signal/](https://auriukux.github.io/deaf-signal/).
 
 Skubus (urgent) flash — raudonas; jei vibracija neveikia (pvz. desktop ar **iPhone Safari**), veikia vizualus drebėjimas (`navigator.vibrate` iOS neveikia).
 
