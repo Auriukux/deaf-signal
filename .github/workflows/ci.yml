@@ -18,8 +18,11 @@ jobs:
         with:
           node-version: "20"
 
+      - name: Install deps
+        run: npm i
+
       - name: Run tests
-        run: node --test test/*.test.js
+        run: npm test
 
       - name: Typecheck declarations
         run: npm run typecheck

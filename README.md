@@ -13,6 +13,19 @@ Flash the screen, show a high-contrast banner, vibrate when supported, or combin
 
 > **Photosensitivity:** full-viewport flashes are **rate-limited** (about max 2 full flashes / 1s, WCAG-minded to stay under 3 flashes/second). Screen flashing can affect people with photosensitive epilepsy — use reduce-motion and avoid rapid manual triggering.
 
+## Limits (honest)
+
+This is an **accessibility helper for visual + haptic cues**, not a guarantee of OS-level alerting. Known browser / platform limits:
+
+| Area | What you get | What you do **not** get |
+| --- | --- | --- |
+| **iOS Safari haptics** | CSS / Web Animations **visual shake** (`shakeElement` / `shakeFallback`) | `navigator.vibrate` is **not implemented** on iOS Safari. Real device haptics need a **native** app (or OS features outside this library). |
+| **PWA / background** | Installed PWA + controlling Service Worker can show notifications **while the worker is alive** | A **fully killed** app / OS-suspended worker is still **OS-limited** (especially on iOS). The demo SW is not a push server. |
+| **Mic while tab hidden** | `startLoudListen` is **best-effort** with default `stopOnHidden: false` | Browsers may suspend the audio context, throttle timers, or pause capture when the tab is backgrounded -- preference is not a contract. |
+| **RMS / loudPeak** | Loudness peak detection (RMS threshold) | **Not** a danger / siren / door / horn / dog / TV / cough **classifier**. Dog bark, TV spikes, and coughs can all look "loud". Product presets (`ALERT_SIREN`, door, ...) are **cues you trigger**, not detections. |
+
+**Demo hint:** use the local demo on a phone and install as a PWA when offered for notification icons. On iPhone expect visual cues only.
+
 Not sure which folder you should be in? This README is a map. Follow the numbered steps and you will always know the path.
 
 ## Install + Demo
