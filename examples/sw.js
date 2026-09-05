@@ -1,6 +1,6 @@
 /* deaf-signal demo — minimal PWA service worker (installability / offline shell + notifications) */
 /* Bump CACHE when demo.html (or other shell assets) change so PWA clients pick up new HTML. */
-const CACHE = "deaf-signal-demo-v7";
+const CACHE = "deaf-signal-demo-v8";
 const examplesBase = new URL("./", self.location.href);
 /** Cache-first shell only (HTML / manifest / icons) — not live library modules */
 const SHELL_URLS = [
@@ -119,7 +119,10 @@ self.addEventListener("message", (event) => {
   const data = event.data;
   if (!data || data.type !== "deaf-signal-notify") return;
   const title = data.title != null ? String(data.title) : "Alert";
-  const options = data.options && typeof data.options === "object" ? data.options : {};
+  const options =
+    data.options && typeof data.options === "object" ? { ...data.options } : {};
+  // Match library default: no OS notification sound unless silent: false
+  if (options.silent === undefined) options.silent = true;
   event.waitUntil(
     self.registration.showNotification(title, options).catch(() => {
       /* permission / platform may reject */

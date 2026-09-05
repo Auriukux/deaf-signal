@@ -72,6 +72,22 @@ describe("presets / getPreset", () => {
     assert.equal(getPreset(null), undefined);
     assert.equal(getPreset(undefined), undefined);
   });
+
+  it("getPreset returns a copy, not the shared PATTERN_* reference", () => {
+    const call = getPreset("call");
+    assert.ok(Array.isArray(call));
+    assert.deepEqual(call, PATTERN_CALL);
+    assert.notEqual(call, PATTERN_CALL);
+    assert.notEqual(call, PRESETS.call);
+    call[0] = 9999;
+    assert.equal(PATTERN_CALL[0], 300);
+    assert.equal(PRESETS.call[0], 300);
+
+    const msg = getPreset("message");
+    assert.notEqual(msg, PATTERN_MESSAGE);
+    msg.push(1);
+    assert.equal(PATTERN_MESSAGE.length, 3);
+  });
 });
 
 describe("alerts / getAlert", () => {

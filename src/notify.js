@@ -1,8 +1,9 @@
 /**
  * Permission-based Notification alerts with visual + haptic cues when the page is visible.
  * Prefers Service Worker `showNotification` when a controlling SW exists; otherwise
- * falls back to page `new Notification(...)`. Graceful no-ops when the Notification
- * API is missing or permission is denied.
+ * falls back to page `new Notification(...)`. Notifications default to `silent: true`
+ * (no OS sound); pass `silent: false` to allow sound. Graceful no-ops when the
+ * Notification API is missing or permission is denied.
  * @module deaf-signal/notify
  */
 
@@ -116,6 +117,8 @@ function buildNotificationOptions(opts) {
   } = opts;
 
   const resolvedIcon = resolveNotifyIcon(icon);
+  // Library is no-sound by default; pass silent: false to allow OS notification sound
+  const isSilent = silent !== false;
 
   /** @type {NotificationOptions} */
   const nOpts = {
@@ -126,13 +129,13 @@ function buildNotificationOptions(opts) {
       requireInteraction != null
         ? !!requireInteraction
         : String(level).toLowerCase() === "urgent",
-    silent: silent === true ? true : undefined,
+    silent: isSilent,
   };
 
   const pattern =
     vibrate != null ? vibrate : defaultVibrateForLevel(level);
-  // Chromium / Android: vibration on the notification itself
-  if (pattern && silent !== true) {
+  // Chromium / Android: vibration on the notification itself (only when not silent)
+  if (pattern && !isSilent) {
     nOpts.vibrate = pattern;
   }
 
@@ -301,7 +304,7 @@ async function runVisibleCues(title, opts) {
  * @param {boolean} [opts.combo=false] When visible: use {@link alertCombo} (banner + flash + vibrate); skips Notification.vibrate while visible so haptic is not doubled
  * @param {Element|string} [opts.shakeTarget] Shake / pulse target
  * @param {boolean} [opts.requireInteraction] Keep notification until dismissed
- * @param {boolean} [opts.silent] Suppress notification sound/vibrate (library stays silent either way)
+ * @param {boolean} [opts.silent=true] Notification `silent` — **default `true`** (no OS sound); pass `false` to allow sound. Library itself never plays audio.
  * @param {boolean} [opts.notification] Force show/hide Notification when visible (`undefined` = show if granted)
  * @param {boolean} [opts.reduceMotion] Passed through to visual helpers
  * @returns {Promise<{ permission: string, notification: Notification|null, visibleCues: boolean }>}

@@ -139,7 +139,7 @@ await runAlert("horn", { message: "Loud alert cue" });
 | `alertCombo(message, opts?)` | Flash + banner + vibrate/shake; urgent flash is always red `#e53935` when `flashColor` omitted (other levels use auto contrast) |
 | `pulseBorder(target, opts?)` | Pulse element border; static outline when reduced motion |
 | `requestNotifyPermission()` | Request Notification permission (`granted` / `denied` / … / `unsupported`) |
-| `notifyAlert(title, opts?)` | System Notification when permitted (SW `showNotification` if controlling SW, else page `Notification`); when visible also flash / shake / combo |
+| `notifyAlert(title, opts?)` | System Notification when permitted (SW `showNotification` if controlling SW, else page `Notification`); **`silent: true` by default** (no OS sound; pass `false` to allow); when visible also flash / shake / combo |
 | `isNotificationSupported()` / `getNotifyPermission()` / `hasControllingServiceWorker()` | Feature / permission / SW helpers |
 | `runAlert(name, opts?)` | Run preset via `alertCombo` + optional `notifyAlert`; **unknown name → `false` + `console.warn`** (fail-closed) |
 | `isListenSupported()` / `getInputLevel()` | Feature helper / live RMS while listening |
@@ -156,7 +156,7 @@ Named patterns live in `src/presets.js` (also re-exported from the package root)
 | `PATTERN_CALL` | `[300, 120, 300, 120, 300]` | Incoming call / ring cue |
 | `PATTERN_MESSAGE` | `[100, 80, 100]` | New message / notification |
 | `PATTERN_URGENT` | `[200, 80, 200, 80, 200, 80, 500]` | Urgent / alarm |
-| `PRESETS` / `getPreset(name)` | map / lookup | `getPreset("call")` |
+| `PRESETS` / `getPreset(name)` | map / lookup (**`getPreset` returns a copy**) | `getPreset("call")` |
 
 ```js
 import { vibratePattern, PATTERN_MESSAGE, getPreset } from "deaf-signal";
@@ -195,9 +195,11 @@ Existing `PATTERN_*` / `getPreset()` vibrate-only presets remain unchanged.
 
 `requestNotifyPermission()` + `notifyAlert(title, opts?)` use the browser **Notification** API (zero deps).
 
-**SW path vs page Notification:** when a **controlling Service Worker** exists (`hasControllingServiceWorker()`), `notifyAlert` prefers `ServiceWorkerRegistration.showNotification` (better for backgrounded / installed PWA demos). Otherwise it falls back to page `new Notification(...)`. The demo SW (`examples/sw.js`) also handles `notificationclick` (focus/open the demo) and `message` events `{ type: 'deaf-signal-notify', title, options }`.
+**No-sound by default:** Notification options use `silent: true` unless you pass `silent: false`. The library never plays audio; this only controls the OS notification sound. The same default applies on the Service Worker `showNotification` path (including the demo SW message handler).
 
-When the document is hidden, the system notification (and notification `vibrate` where supported) is the main cue. When the tab is visible, `notifyAlert` also calls the existing flash / shake / combo helpers (combo:true uses one haptic path via alertCombo and skips stacking Notification.vibrate while visible).
+**SW path vs page Notification:** when a **controlling Service Worker** exists (`hasControllingServiceWorker()`), `notifyAlert` prefers `ServiceWorkerRegistration.showNotification` (better for backgrounded / installed PWA demos). Otherwise it falls back to page `new Notification(...)`. The demo SW (`examples/sw.js`) also handles `notificationclick` (focus/open the demo) and `message` events `{ type: 'deaf-signal-notify', title, options }` (defaults `silent: true`).
+
+When the document is hidden, the system notification (and notification `vibrate` where supported, and only when `silent: false`) is the main cue. When the tab is visible, `notifyAlert` also calls the existing flash / shake / combo helpers (combo:true uses one haptic path via alertCombo and skips stacking Notification.vibrate while visible).
 
 Pass `icon` (absolute or page-relative URL) when you want a Notification icon; omitted / `undefined` means **no icon** (the library does not assume `./icons/icon-192.png`). Pass `icon: false` to force omit. The demo passes an explicit icon path.
 

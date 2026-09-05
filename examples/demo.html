@@ -710,13 +710,20 @@
       const t = strings[lang];
       if (!isNotificationSupported()) {
         demoBanner(t.notifyUnsupported, { level: "warn", durationMs: 3500 });
-      } else if (getNotifyPermission() === "denied") {
-        demoBanner(t.notifyDenied, { level: "warn", durationMs: 3500 });
-      } else if (getNotifyPermission() === "default") {
-        demoBanner(t.notifyDefault, { level: "info", durationMs: 3500 });
-      } else {
-        demoBanner(t.notifySent, { level: "info", durationMs: 2500 });
+        return;
       }
+      const perm = getNotifyPermission();
+      // Without granted permission, only show honest status — do not delay then
+      // flash/combo the screen as if a background notification ran.
+      if (perm === "denied" || perm === "unsupported") {
+        demoBanner(t.notifyDenied, { level: "warn", durationMs: 3500 });
+        return;
+      }
+      if (perm !== "granted") {
+        demoBanner(t.notifyDefault, { level: "info", durationMs: 3500 });
+        return;
+      }
+      demoBanner(t.notifySent, { level: "info", durationMs: 2500 });
       // Delay so the user can background the tab; notifyAlert prefers SW showNotification.
       await new Promise((r) => setTimeout(r, 2500));
       await notifyAlert(t.notifyTitle, {
