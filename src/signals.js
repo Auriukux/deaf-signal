@@ -356,14 +356,6 @@ export function flashScreen(opts = {}) {
 }
 
 /**
- * Show a high-contrast banner message at the top of the page.
- * @param {string} message Text to display
- * @param {object} [opts]
- * @param {"info"|"warn"|"urgent"} [opts.level="info"] Visual severity
- * @param {number} [opts.durationMs=3000] Auto-dismiss delay (0 = stay until closed)
- * @returns {Promise<HTMLElement|null>} The banner element (null without document)
- */
-/**
  * Default banner close aria-label from `<html lang>` (`lt*` → "Uždaryti", else "Close").
  * Demo / callers can still pass `closeLabel` to override.
  * @returns {string}
@@ -380,6 +372,15 @@ export function defaultBannerCloseLabel() {
   return "Close";
 }
 
+/**
+ * Show a high-contrast banner message at the top of the page.
+ * @param {string} message Text to display
+ * @param {object} [opts]
+ * @param {"info"|"warn"|"urgent"} [opts.level="info"] Visual severity
+ * @param {number} [opts.durationMs=3000] Auto-dismiss delay (0 = stay until closed)
+ * @param {string} [opts.closeLabel] Close button aria-label (defaults via {@link defaultBannerCloseLabel})
+ * @returns {Promise<HTMLElement|null>} The banner element (null without document)
+ */
 export function showBanner(message, opts = {}) {
   const {
     level = "info",
@@ -431,15 +432,22 @@ export function showBanner(message, opts = {}) {
     close.textContent = "×";
     Object.assign(close.style, {
       position: "absolute",
-      top: "8px",
-      right: "12px",
+      top: "0",
+      right: "0",
       background: "transparent",
       border: "none",
       color: colors.fg,
       fontSize: "24px",
       cursor: "pointer",
       lineHeight: "1",
-      padding: "4px 8px",
+      // ~44px touch target (WCAG / mobile)
+      minWidth: "44px",
+      minHeight: "44px",
+      padding: "10px",
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      boxSizing: "border-box",
     });
     close.addEventListener("click", () => banner.remove());
     banner.appendChild(close);
@@ -455,6 +463,8 @@ export function showBanner(message, opts = {}) {
 }
 
 const SHAKE_STYLE_ID = "deaf-signal-shake-style";
+/** @type {WeakMap<Element, () => void>} Abort prior shake on the same element */
+const activeShakeAbort = new WeakMap();
 
 /**
  * Ensure the shared CSS @keyframes for visual shake are present once.
@@ -483,6 +493,7 @@ function ensureShakeKeyframes() {
  * Visual shake (drebėjimas) via CSS @keyframes / Web Animations.
  * Much more visible than tiny step transforms — default amplitude ~16px with slight rotate.
  * Honors `prefers-reduced-motion` / `opts.reduceMotion` with a brief opacity pulse only.
+ * Starting a new shake on the same element cancels/replaces any prior WAAPI/CSS shake.
  * Cleans up animation and inline styles afterward.
  * @param {Element|string} target Element or CSS selector
  * @param {object} [opts]
@@ -509,6 +520,17 @@ export function shakeElement(target, opts = {}) {
       return;
     }
 
+    // Cancel/replace any in-flight shake on this element
+    const prevAbort = activeShakeAbort.get(el);
+    if (prevAbort) {
+      try {
+        prevAbort();
+      } catch {
+        /* ignore */
+      }
+      activeShakeAbort.delete(el);
+    }
+
     const prevTransform = el.style.transform;
     const prevTransition = el.style.transition;
     const prevOpacity = el.style.opacity;
@@ -516,7 +538,28 @@ export function shakeElement(target, opts = {}) {
     const prevAnimation = el.style.animation;
     const prevAmp = el.style.getPropertyValue("--deaf-shake-amp");
 
+    /** @type {Animation|null} */
+    let waapiAnim = null;
+    /** @type {number[]} */
+    const timers = [];
+    /** @type {((ev?: Event) => void)|null} */
+    let onEnd = null;
+
     const cleanup = () => {
+      if (onEnd) {
+        el.removeEventListener("animationend", onEnd);
+        onEnd = null;
+      }
+      for (const id of timers) window.clearTimeout(id);
+      timers.length = 0;
+      if (waapiAnim) {
+        try {
+          waapiAnim.cancel();
+        } catch {
+          /* ignore */
+        }
+        waapiAnim = null;
+      }
       el.style.transform = prevTransform;
       el.style.transition = prevTransition;
       el.style.opacity = prevOpacity;
@@ -529,17 +572,37 @@ export function shakeElement(target, opts = {}) {
       }
     };
 
+    let done = false;
+    const finish = (ran) => {
+      if (done) return;
+      done = true;
+      if (activeShakeAbort.get(el) === abort) {
+        activeShakeAbort.delete(el);
+      }
+      cleanup();
+      resolve(ran);
+    };
+
+    const abort = () => {
+      // Prior shake replaced — resolve false without leaving styles behind
+      finish(false);
+    };
+    activeShakeAbort.set(el, abort);
+
     if (shouldReduceMotion(reduceMotionOpt)) {
       // Opacity pulse only — no heavy shake
       el.style.transition = "opacity 80ms ease";
       el.style.opacity = "0.45";
-      window.setTimeout(() => {
-        el.style.opacity = prevOpacity || "1";
+      timers.push(
         window.setTimeout(() => {
-          cleanup();
-          resolve(true);
-        }, 100);
-      }, Math.min(180, durationMs));
+          el.style.opacity = prevOpacity || "1";
+          timers.push(
+            window.setTimeout(() => {
+              finish(true);
+            }, 100)
+          );
+        }, Math.min(180, durationMs))
+      );
       return;
     }
 
@@ -549,18 +612,10 @@ export function shakeElement(target, opts = {}) {
     el.style.willChange = "transform";
     el.style.transition = "none";
 
-    let done = false;
-    const finish = () => {
-      if (done) return;
-      done = true;
-      cleanup();
-      resolve(true);
-    };
-
     // Prefer Web Animations API when available (same keyframes, reliable cleanup)
     if (typeof el.animate === "function") {
       const a = amp;
-      const anim = el.animate(
+      waapiAnim = el.animate(
         [
           { transform: "translateX(0) rotate(0deg)" },
           { transform: `translateX(${-a}px) rotate(-1.2deg)` },
@@ -578,18 +633,20 @@ export function shakeElement(target, opts = {}) {
           fill: "none",
         }
       );
-      anim.onfinish = finish;
-      anim.oncancel = finish;
+      waapiAnim.onfinish = () => finish(true);
+      // oncancel used when we abort via anim.cancel() in cleanup — finish already guards
+      waapiAnim.oncancel = () => {
+        /* abort path calls finish(false) directly */
+      };
       return;
     }
 
     el.style.animation = `deaf-signal-shake ${durationMs}ms ease-in-out 1`;
-    const onEnd = () => {
-      el.removeEventListener("animationend", onEnd);
-      finish();
+    onEnd = () => {
+      finish(true);
     };
     el.addEventListener("animationend", onEnd);
-    window.setTimeout(onEnd, durationMs + 80);
+    timers.push(window.setTimeout(onEnd, durationMs + 80));
   });
 }
 

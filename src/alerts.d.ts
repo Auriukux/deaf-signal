@@ -73,8 +73,8 @@ export interface RunAlertOptions
 }
 
 export interface RunAlertResult {
-  alert: AlertPreset | null;
-  combo: AlertComboResult | null;
+  alert: AlertPreset;
+  combo: AlertComboResult;
   notification: NotifyAlertResult | null;
 }
 

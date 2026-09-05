@@ -1,5 +1,6 @@
 /* deaf-signal demo — minimal PWA service worker (installability / offline shell + notifications) */
-const CACHE = "deaf-signal-demo-v6";
+/* Bump CACHE when demo.html (or other shell assets) change so PWA clients pick up new HTML. */
+const CACHE = "deaf-signal-demo-v7";
 const examplesBase = new URL("./", self.location.href);
 /** Cache-first shell only (HTML / manifest / icons) — not live library modules */
 const SHELL_URLS = [
