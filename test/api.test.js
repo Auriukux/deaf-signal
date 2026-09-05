@@ -291,6 +291,196 @@ describe("listen helpers", () => {
     assert.equal(getInputLevel(), null);
   });
 
+
+  it("startLoudListen race: stop during resume aborts before active", async () => {
+    let stopCount = 0;
+    const track = {
+      kind: "audio",
+      stop() {
+        stopCount += 1;
+      },
+    };
+    const stream = {
+      getTracks() {
+        return [track];
+      },
+    };
+
+    /** @type {() => void} */
+    let resolveResume;
+    const resumeGate = new Promise((r) => {
+      resolveResume = r;
+    });
+
+    const prevWindow = globalThis.window;
+    const prevNavDesc = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+
+    globalThis.window = {
+      isSecureContext: true,
+      AudioContext: function AudioContext() {
+        this.state = "suspended";
+        this.createMediaStreamSource = () => ({
+          connect() {},
+          disconnect() {},
+        });
+        this.createAnalyser = () => ({
+          fftSize: 2048,
+          smoothingTimeConstant: 0,
+          connect() {},
+          disconnect() {},
+          getByteTimeDomainData(buf) {
+            buf.fill(128);
+          },
+        });
+        this.close = async () => {
+          this.state = "closed";
+        };
+        this.resume = () => resumeGate.then(() => {
+          this.state = "running";
+        });
+      },
+      addEventListener() {},
+      removeEventListener() {},
+      setInterval() {
+        return 1;
+      },
+      clearInterval() {},
+      requestAnimationFrame() {
+        return 1;
+      },
+      cancelAnimationFrame() {},
+    };
+    Object.defineProperty(globalThis, "navigator", {
+      configurable: true,
+      writable: true,
+      value: {
+        mediaDevices: {
+          async getUserMedia() {
+            return stream;
+          },
+        },
+      },
+    });
+
+    try {
+      const startPromise = startLoudListen({ alert: false });
+      // Let getUserMedia + AudioContext reach resume await
+      await new Promise((r) => setImmediate(r));
+      stopLoudListen();
+      resolveResume();
+      await assert.rejects(
+        () => startPromise,
+        (err) => {
+          assert.match(String(err && err.message), /aborted|superseded/i);
+          return true;
+        }
+      );
+      assert.ok(stopCount >= 1, "media track should be stopped");
+      assert.equal(getInputLevel(), null);
+    } finally {
+      try {
+        stopLoudListen();
+      } catch (_) {}
+      if (prevWindow === undefined) delete globalThis.window;
+      else globalThis.window = prevWindow;
+      if (prevNavDesc) {
+        Object.defineProperty(globalThis, "navigator", prevNavDesc);
+      } else {
+        delete globalThis.navigator;
+      }
+    }
+  });
+
+  it("startLoudListen race: stop after mid-setup gen check never marks active", async () => {
+    let stopCount = 0;
+    const track = {
+      kind: "audio",
+      stop() {
+        stopCount += 1;
+      },
+    };
+    const stream = {
+      getTracks() {
+        return [track];
+      },
+    };
+
+    const prevWindow = globalThis.window;
+    const prevNavDesc = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+    let intervalStarted = false;
+
+    globalThis.window = {
+      isSecureContext: true,
+      AudioContext: function AudioContext() {
+        this.state = "running";
+        this.createMediaStreamSource = () => {
+          // Supersede after the post-resume generation check, before timers/active
+          stopLoudListen();
+          return { connect() {}, disconnect() {} };
+        };
+        this.createAnalyser = () => ({
+          fftSize: 2048,
+          smoothingTimeConstant: 0,
+          connect() {},
+          disconnect() {},
+          getByteTimeDomainData(buf) {
+            buf.fill(128);
+          },
+        });
+        this.close = async () => {
+          this.state = "closed";
+        };
+        this.resume = async () => {};
+      },
+      addEventListener() {},
+      removeEventListener() {},
+      setInterval() {
+        intervalStarted = true;
+        return 1;
+      },
+      clearInterval() {},
+      requestAnimationFrame() {
+        return 1;
+      },
+      cancelAnimationFrame() {},
+    };
+    Object.defineProperty(globalThis, "navigator", {
+      configurable: true,
+      writable: true,
+      value: {
+        mediaDevices: {
+          async getUserMedia() {
+            return stream;
+          },
+        },
+      },
+    });
+
+    try {
+      await assert.rejects(
+        () => startLoudListen({ alert: false }),
+        (err) => {
+          assert.match(String(err && err.message), /aborted|superseded/i);
+          return true;
+        }
+      );
+      assert.equal(intervalStarted, false, "setInterval must not run for aborted start");
+      assert.ok(stopCount >= 1, "media track should be stopped");
+      assert.equal(getInputLevel(), null);
+    } finally {
+      try {
+        stopLoudListen();
+      } catch (_) {}
+      if (prevWindow === undefined) delete globalThis.window;
+      else globalThis.window = prevWindow;
+      if (prevNavDesc) {
+        Object.defineProperty(globalThis, "navigator", prevNavDesc);
+      } else {
+        delete globalThis.navigator;
+      }
+    }
+  });
+
   it("startLoudListen stops tracks if AudioContext construction throws", async () => {
     let stopCount = 0;
     const track = {

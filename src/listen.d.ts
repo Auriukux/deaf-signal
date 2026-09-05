@@ -3,7 +3,8 @@
  * High RMS threshold by design: quiet rooms and soft speech should NOT fire.
  * RMS loudness ≠ siren / door / horn classification — peaks only, not event type.
  * Active sessions auto-stop on pagehide / beforeunload (and explicit stop()).
- * Visibility hidden does NOT stop by default; pass `stopOnHidden: true` for old behavior.
+ * Visibility hidden does NOT stop by default (`stopOnHidden: false` is a preference,
+ * not a contract): background listening is best-effort — browsers may suspend AudioContext.
  * @module deaf-signal/listen
  */
 
@@ -47,8 +48,9 @@ export interface StartLoudListenOptions {
   /** Extra opts forwarded to `runAlert` */
   alertOpts?: Record<string, unknown>;
   /**
-   * If true, also stop when `visibilitychange` → hidden (old behavior).
-   * Default false — keep listening while the tab is backgrounded.
+   * If true, also stop when `visibilitychange` → hidden.
+   * Default false — prefer keeping the session while backgrounded (best-effort;
+   * browsers may still suspend AudioContext / throttle timers). Not a guarantee.
    */
   stopOnHidden?: boolean;
   /** Called once when the session stops (explicit stop, unload, or stopOnHidden) */
@@ -82,6 +84,7 @@ export function stopLoudListen(): void;
  * Requires a secure context (HTTPS / localhost) and mic permission.
  * A second call aborts any in-flight first start.
  * Auto-stops on pagehide / beforeunload (not on visibility hidden unless stopOnHidden).
+ * Background-tab listening with `stopOnHidden: false` is best-effort only.
  */
 export function startLoudListen(
   opts?: StartLoudListenOptions

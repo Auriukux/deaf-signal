@@ -293,16 +293,22 @@ function ensureSharedFlashOverlay() {
  * @param {object} [opts]
  * @param {string} [opts.color]
  * @param {number} [opts.durationMs]
- * @param {number} [opts.opacity]
+ * @param {number} [opts.opacity] Overlay opacity clamped to 0–1 (default 0.55)
  * @param {boolean} [opts.reduceMotion]
  * @returns {Promise<void>}
  */
 export function flashScreen(opts = {}) {
   const {
     durationMs = DEFAULT_FLASH_MS,
-    opacity = 0.55,
     reduceMotion: reduceMotionOpt,
   } = opts;
+  const rawOpacity = opts.opacity;
+  const opacityNum =
+    typeof rawOpacity === "number" && Number.isFinite(rawOpacity)
+      ? rawOpacity
+      : 0.55;
+  /** Clamp opacity to 0–1 (invalid / omitted → 0.55). */
+  const opacity = Math.min(1, Math.max(0, opacityNum));
   const color =
     opts.color !== undefined && opts.color !== null
       ? opts.color
@@ -494,13 +500,15 @@ function ensureShakeKeyframes() {
  * Much more visible than tiny step transforms — default amplitude ~16px with slight rotate.
  * Honors `prefers-reduced-motion` / `opts.reduceMotion` with a brief opacity pulse only.
  * Starting a new shake on the same element cancels/replaces any prior WAAPI/CSS shake.
+ * The aborted prior Promise resolves `false` (overlap abort); a completed cue resolves `true`.
  * Cleans up animation and inline styles afterward.
  * @param {Element|string} target Element or CSS selector
  * @param {object} [opts]
  * @param {number} [opts.durationMs=550] Total shake duration (~500–600ms)
  * @param {number} [opts.amplitudePx=16] Max horizontal offset in px (clamped 2–64)
  * @param {boolean} [opts.reduceMotion] Force skip/respect reduced motion
- * @returns {Promise<boolean>} true if a visual cue ran
+ * @returns {Promise<boolean>} `true` if this call's visual cue finished; `false` if skipped
+ *   (no element / no document) or aborted by a newer overlapping shake on the same element
  */
 export function shakeElement(target, opts = {}) {
   const {
@@ -733,9 +741,9 @@ export function pulseBorder(target, opts = {}) {
       resolve();
       return;
     }
-    const el =
-      typeof target === "string" ? document.querySelector(target) : target;
-    if (!el || !(el instanceof Element)) {
+    // resolveElement: invalid CSS selectors must not throw (querySelector can)
+    const el = resolveElement(target);
+    if (!el) {
       resolve();
       return;
     }

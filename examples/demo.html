@@ -555,11 +555,11 @@
         btnListenStop: "Stabdyti",
         listenLevelLabel: "Lygis",
         listenIdle: "Laukia…",
-        listenListening: "Klauso — tik garsumo pikas (ne sirenos atpažinimas).",
+        listenListening: "Klauso (best-effort) — tik garsumo pikas; paslėptas skirtukas gali pristabdyti AudioContext.",
         listenFired: "Stipraus garsumo pikas!",
         listenDenied: "Mikrofono leidimas atmestas arba nepalaikomas.",
         listenUnsupported: "Mikrofono klausymas nepalaikomas šiame kontekste (reikia HTTPS / localhost).",
-        listenHint: "RMS matuoja garsumą, ne įvykio tipą — suveikia tik stiprūs garsumo pikiai; šnabždesys neturėtų paleisti.",
+        listenHint: "RMS matuoja garsumą, ne tipą. Foninis klausymas — best-effort (stopOnHidden:false nėra garantija; naršyklė gali pristabdyti AudioContext).",
         alertSirenMsg: "Skubus signalas",
         close: "Uždaryti",
       },
@@ -606,11 +606,11 @@
         btnListenStop: "Stop",
         listenLevelLabel: "Level",
         listenIdle: "Idle…",
-        listenListening: "Listening — loudness peak only (not siren recognition).",
+        listenListening: "Listening (best-effort) — loudness peak only; a hidden tab may suspend AudioContext.",
         listenFired: "Strong loudness peak!",
         listenDenied: "Microphone permission denied or unsupported.",
         listenUnsupported: "Mic listen is not supported here (needs HTTPS / localhost).",
-        listenHint: "RMS measures loudness, not event type — only strong loudness peaks fire; whispering should not.",
+        listenHint: "RMS measures loudness, not type. Background listen is best-effort (stopOnHidden:false is not a guarantee; browsers may suspend AudioContext).",
         alertSirenMsg: "Urgent cue",
         close: "Close",
       },
@@ -804,7 +804,7 @@
           minIntervalMs: 2500,
           // loudPeak only — never wire mic to ALERT_SIREN / door / horn
           alert: "urgent",
-          // Default: keep listening while tab is hidden; stop on unload / explicit stop
+          // Prefer keep-alive while hidden (best-effort — not a browser contract)
           stopOnHidden: false,
           alertOpts: {
             shakeTarget: document.querySelector("#loud-listen") || document.querySelector("main") || document.body,
