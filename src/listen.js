@@ -237,34 +237,49 @@ export async function startLoudListen(opts = {}) {
   pendingStream = stream;
 
   const AC = window.AudioContext || window.webkitAudioContext;
-  const audioContext = new AC();
-  if (audioContext.state === "suspended") {
-    try {
-      await audioContext.resume();
-    } catch (_) {
-      /* ignore */
-    }
-  }
+  /** @type {AudioContext} */
+  let audioContext;
+  /** @type {MediaStreamAudioSourceNode} */
+  let source;
+  /** @type {AnalyserNode} */
+  let analyser;
+  /** @type {Uint8Array} */
+  let timeData;
 
-  if (myGen !== listenGeneration) {
+  try {
+    audioContext = new AC();
+    if (audioContext.state === "suspended") {
+      try {
+        await audioContext.resume();
+      } catch (_) {
+        /* ignore */
+      }
+    }
+
+    if (myGen !== listenGeneration) {
+      throw new Error("Loud listen start aborted (superseded by a newer start/stop).");
+    }
+
+    source = audioContext.createMediaStreamSource(stream);
+    analyser = audioContext.createAnalyser();
+    analyser.fftSize = 2048;
+    analyser.smoothingTimeConstant = 0.3;
+    source.connect(analyser);
+    // Do not connect to destination — silent monitoring only
+
+    timeData = new Uint8Array(analyser.fftSize);
+  } catch (err) {
     try {
       stream.getTracks().forEach((t) => t.stop());
     } catch (_) {}
     try {
-      if (audioContext.state !== "closed") audioContext.close();
+      if (audioContext && audioContext.state !== "closed") {
+        audioContext.close();
+      }
     } catch (_) {}
     if (pendingStream === stream) pendingStream = null;
-    throw new Error("Loud listen start aborted (superseded by a newer start/stop).");
+    throw err;
   }
-
-  const source = audioContext.createMediaStreamSource(stream);
-  const analyser = audioContext.createAnalyser();
-  analyser.fftSize = 2048;
-  analyser.smoothingTimeConstant = 0.3;
-  source.connect(analyser);
-  // Do not connect to destination — silent monitoring only
-
-  const timeData = new Uint8Array(analyser.fftSize);
   let lastRms = 0;
   let lastFireAt = 0;
   let stopped = false;

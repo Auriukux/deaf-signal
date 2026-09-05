@@ -49,6 +49,8 @@ import {
   DEFAULT_MIN_INTERVAL_MS,
   DEFAULT_LOUD_ALERT,
   resolveLoudAlertName,
+  startLoudListen,
+  stopLoudListen,
 } from "../src/listen.js";
 
 describe("presets / getPreset", () => {
@@ -271,6 +273,60 @@ describe("listen helpers", () => {
     assert.equal(typeof isListenSupported(), "boolean");
     assert.equal(isListenSupported(), false);
     assert.equal(getInputLevel(), null);
+  });
+
+  it("startLoudListen stops tracks if AudioContext construction throws", async () => {
+    let stopCount = 0;
+    const track = {
+      kind: "audio",
+      stop() {
+        stopCount += 1;
+      },
+    };
+    const stream = {
+      getTracks() {
+        return [track];
+      },
+    };
+
+    const prevWindow = globalThis.window;
+    const prevNav = globalThis.navigator;
+
+    globalThis.window = {
+      isSecureContext: true,
+      AudioContext: function AudioContext() {
+        throw new Error("AudioContext boom");
+      },
+      addEventListener() {},
+      removeEventListener() {},
+    };
+    globalThis.navigator = {
+      mediaDevices: {
+        async getUserMedia() {
+          return stream;
+        },
+      },
+    };
+
+    try {
+      await assert.rejects(
+        () => startLoudListen({ alert: false }),
+        (err) => {
+          assert.match(String(err && err.message), /AudioContext boom/);
+          return true;
+        }
+      );
+      assert.equal(stopCount, 1, "media track should be stopped on setup failure");
+      assert.equal(getInputLevel(), null);
+    } finally {
+      try {
+        stopLoudListen();
+      } catch (_) {}
+      if (prevWindow === undefined) delete globalThis.window;
+      else globalThis.window = prevWindow;
+      if (prevNav === undefined) delete globalThis.navigator;
+      else globalThis.navigator = prevNav;
+    }
   });
 });
 
