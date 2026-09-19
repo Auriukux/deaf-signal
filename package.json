@@ -46,7 +46,7 @@
   "scripts": {
     "demo": "npx --yes serve .",
     "test": "node --test test/*.test.js",
-    "lint": "npx --yes -p eslint@9.39.5 -p @eslint/js@9.39.5 -p globals@16.5.0 eslint src test",
+    "lint": "npx --yes eslint@9.39.5 src test",
     "typecheck": "npx --yes -p typescript@5.6.3 tsc --noEmit -p tsconfig.json",
     "prepublishOnly": "npm test && npm run lint && npm run typecheck"
   },

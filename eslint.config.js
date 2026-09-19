@@ -1,33 +1,39 @@
-import js from "@eslint/js";
-import globals from "globals";
-
 export default [
   {
     ignores: ["examples/**", "demo/**", "node_modules/**", "_site/**"],
   },
-  js.configs.recommended,
   {
-    files: ["src/**/*.js"],
+    files: ["src/**/*.js", "test/**/*.js"],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: "module",
-      globals: { ...globals.browser },
+      globals: {
+        window: "readonly",
+        document: "readonly",
+        navigator: "readonly",
+        Element: "readonly",
+        HTMLElement: "readonly",
+        Node: "readonly",
+        getComputedStyle: "readonly",
+        console: "readonly",
+        setTimeout: "readonly",
+        clearTimeout: "readonly",
+        Promise: "readonly",
+        URL: "readonly",
+        Notification: "readonly",
+        AudioContext: "readonly",
+        globalThis: "readonly",
+        process: "readonly",
+        Buffer: "readonly",
+      },
     },
     rules: {
+      "no-undef": "error",
       "no-empty": ["error", { allowEmptyCatch: true }],
-      "no-unused-vars": ["error", { argsIgnorePattern: "^_", caughtErrors: "none" }],
-    },
-  },
-  {
-    files: ["test/**/*.js"],
-    languageOptions: {
-      ecmaVersion: 2022,
-      sourceType: "module",
-      globals: { ...globals.node, ...globals.browser },
-    },
-    rules: {
-      "no-empty": ["error", { allowEmptyCatch: true }],
-      "no-unused-vars": ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrors: "none" }],
+      "no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrors: "none" },
+      ],
     },
   },
 ];
