@@ -17,12 +17,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: npm
 
       - name: Install deps
-        run: npm i
+        run: npm ci
 
       - name: Run tests
         run: npm test
+
+      - name: Lint
+        run: npm run lint
 
       - name: Typecheck declarations
         run: npm run typecheck

@@ -30,7 +30,7 @@ jobs:
       - name: Stage site (repo root tree for Pages)
         run: |
           mkdir -p _site
-          cp index.html serve.json _site/
+          cp index.html 404.html serve.json _site/
           cp -r examples src demo _site/
 
       - name: Upload Pages artifact

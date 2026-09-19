@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Fixed / polished
+- **CI** uses `npm ci` (lockfile) + npm cache.
+- **`flashScreen({ durationMs: 0 })`** is a no-op and does **not** consume the photosensitivity rate-limit slot.
+- **`runAlert({ notify: true })`** forwards the preset (or override) `vibratePattern`, plus optional `icon` / `silent`, to the system Notification. In-page haptic is not doubled.
+- **`notifyAlert`**: in-page `navigator.vibrate` runs only when `shake` is on. Passing `vibrate` for the OS Notification no longer stacks a second in-page vibrate when `shake`/`combo` are off.
+- PWA manifest: drop `maskable` on the same 512 asset as `any` (no safe-zone icon yet).
+- Rate-limit / settle helpers marked `@internal` on `deaf-signal/signals` (still not on the package root).
+
 ## 0.2.0 — 2026-09-05
 
 Breaking defaults / a11y hardening for the `0.x` library API.

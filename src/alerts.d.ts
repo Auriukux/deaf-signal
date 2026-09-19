@@ -71,6 +71,13 @@ export interface RunAlertOptions
   notify?: boolean;
   tag?: string;
   requireInteraction?: boolean;
+  /** Forwarded to notifyAlert when `notify: true` */
+  icon?: string | false;
+  /**
+   * Forwarded to notifyAlert when `notify: true`.
+   * Default remains silent (`true`) unless passed `false`.
+   */
+  silent?: boolean;
 }
 
 export interface RunAlertResult {
