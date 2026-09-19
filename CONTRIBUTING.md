@@ -61,7 +61,8 @@ Or load `../src/index.js` from the demo page as shown in `examples/demo.html`.
 
 ## Pull requests
 
-- CI runs on push/PR to main; keep tests and the package typecheck script green (includes all src d.ts files).
+- CI runs on push/PR to main (`npm ci`, `npm test`, `npm run typecheck`); keep tests and the package typecheck script green (includes all src d.ts files).
+- Demo PWA: if you change `examples/demo.html` (or other SW shell assets), bump `CACHE` in `examples/sw.js` so installed clients pick up the new HTML.
 - Keep changes focused and small.
 - Prefer accessibility-friendly defaults (`role="alert"`, high contrast).
 - Keep demo i18n **LT + EN** in sync if changing UI strings.
