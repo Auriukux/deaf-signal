@@ -46,7 +46,7 @@
   "scripts": {
     "demo": "npx --yes serve .",
     "test": "node --test test/*.test.js",
-    "lint": "eslint src test",
+    "lint": "npx --yes -p eslint@9.39.5 -p @eslint/js@9.39.5 -p globals@16.5.0 eslint src test",
     "typecheck": "npx --yes -p typescript@5.6.3 tsc --noEmit -p tsconfig.json",
     "prepublishOnly": "npm test && npm run lint && npm run typecheck"
   },
@@ -80,9 +80,6 @@
   "homepage": "https://auriukux.github.io/deaf-signal/",
   "sideEffects": false,
   "devDependencies": {
-    "@eslint/js": "^9.39.5",
-    "eslint": "^9.39.5",
-    "globals": "^16.5.0",
     "jsdom": "^26.1.0"
   }
 }
