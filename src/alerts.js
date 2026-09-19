@@ -145,7 +145,8 @@ export function getAlert(name) {
  *
  * Overrides via `opts`: `message`, `body`, `level`, `flashColor`, `vibratePattern`,
  * `shake` / `shakeTarget` / `shakeFallback`, `durationMs`, `closeLabel`, `reduceMotion`,
- * `notify` (opt-in), plus any `alertCombo` flags (`flash`, `banner`, `vibrate`).
+ * `notify` (opt-in), `icon` / `silent` (forwarded to notifyAlert), plus any
+ * `alertCombo` flags (`flash`, `banner`, `vibrate`).
  *
  * @param {"call"|"message"|"door"|"siren"|"horn"|"urgent"|string} name
  * @param {object} [opts]
@@ -204,14 +205,20 @@ export async function runAlert(name, opts = {}) {
 
   if (wantNotify) {
     // In-page cues already ran via alertCombo — ask notifyAlert for the
-    // system Notification only (flash/shake/combo off; omit vibrate so
-    // runVisibleCues does not fire a second haptic).
+    // system Notification only (flash/shake/combo off). Preset vibrate is
+    // for the OS Notification; runVisibleCues skips haptic when shake is off.
     notification = await notifyAlert(message, {
       body,
       level,
       flash: false,
       shake: false,
       combo: false,
+      // OS Notification pattern only (silent default skips it). In-page
+      // haptic already ran via alertCombo; runVisibleCues ignores vibrate
+      // when shake/combo are off.
+      vibrate: vibratePattern,
+      icon: opts.icon,
+      silent: opts.silent,
       tag: opts.tag || `deaf-signal-alert-${preset.name}`,
       requireInteraction:
         opts.requireInteraction != null
