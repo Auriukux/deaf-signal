@@ -258,6 +258,9 @@ async function runVisibleCues(title, opts) {
     tasks.push(flashScreen(flashOpts));
   }
 
+  // In-page haptic only when shake is requested. Passing `vibrate` for the
+  // OS Notification must not fire a second navigator.vibrate while visible
+  // (runAlert notify path: flash/shake/combo all false + preset pattern).
   if (shake && shakeTarget != null) {
     // Explicit target required — never default to main/body
     vibratePattern(pattern, {
@@ -265,7 +268,7 @@ async function runVisibleCues(title, opts) {
       target: shakeTarget,
       reduceMotion,
     });
-  } else if (shake || vibrate != null) {
+  } else if (shake) {
     // Haptic only when no explicit shake target
     vibratePattern(pattern, { shakeFallback: false });
   }
